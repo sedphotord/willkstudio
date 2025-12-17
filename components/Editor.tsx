@@ -142,7 +142,7 @@ const SettingsModal = ({ onClose }: { onClose: () => void }) => {
                                         )}
                                      >
                                         <div className="flex items-center gap-2">
-                                            <Sparkles className="w-4 h-4" />
+                                            <Zap className="w-4 h-4 text-purple-400" />
                                             <span>Auto Mode</span>
                                         </div>
                                         {localSettings.autoMode && <Check className="w-3.5 h-3.5" />}
@@ -340,7 +340,7 @@ const DiffModal = ({
 // --- Browser Frame & Other Components (kept similar but condensed for brevity) ---
 // ... BrowserFrame, CommandPalette, TerminalPanel (same as previous) ...
 // Re-inserting BrowserFrame, CommandPalette, TerminalPanel for completeness
-const BrowserFrame = () => {
+const BrowserFrame = ({ isFullScreen, toggleFullScreen }: { isFullScreen: boolean; toggleFullScreen: () => void }) => {
     const [refreshKey, setRefreshKey] = useState(0);
     const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
     const [url, setUrl] = useState('localhost:3000');
@@ -353,7 +353,7 @@ const BrowserFrame = () => {
     };
 
     return (
-        <div className="flex flex-col h-full w-full bg-zinc-950">
+        <div className={cn("flex flex-col h-full w-full bg-zinc-950", isFullScreen && "fixed inset-0 z-[200]")}>
              <div className="h-10 bg-zinc-900 border-b border-zinc-800 flex items-center px-3 gap-3 shrink-0 justify-between">
                  <div className="flex items-center gap-3 flex-1 min-w-0">
                      <div className="flex items-center gap-1 shrink-0">
@@ -375,10 +375,16 @@ const BrowserFrame = () => {
                          <span className="truncate">{url}</span>
                      </div>
                  </div>
-                 <div className="flex items-center gap-1 bg-zinc-950 p-0.5 rounded-lg border border-zinc-800 shrink-0">
-                    <button onClick={() => setViewport('desktop')} className={cn("p-1.5 rounded-md", viewport === 'desktop' ? "bg-zinc-800 text-white" : "text-zinc-500")}><Monitor className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => setViewport('tablet')} className={cn("p-1.5 rounded-md", viewport === 'tablet' ? "bg-zinc-800 text-white" : "text-zinc-500")}><Tablet className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => setViewport('mobile')} className={cn("p-1.5 rounded-md", viewport === 'mobile' ? "bg-zinc-800 text-white" : "text-zinc-500")}><Smartphone className="w-3.5 h-3.5" /></button>
+                 <div className="flex items-center gap-2">
+                     <div className="flex items-center gap-1 bg-zinc-950 p-0.5 rounded-lg border border-zinc-800 shrink-0">
+                        <button onClick={() => setViewport('desktop')} className={cn("p-1.5 rounded-md", viewport === 'desktop' ? "bg-zinc-800 text-white" : "text-zinc-500")}><Monitor className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => setViewport('tablet')} className={cn("p-1.5 rounded-md", viewport === 'tablet' ? "bg-zinc-800 text-white" : "text-zinc-500")}><Tablet className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => setViewport('mobile')} className={cn("p-1.5 rounded-md", viewport === 'mobile' ? "bg-zinc-800 text-white" : "text-zinc-500")}><Smartphone className="w-3.5 h-3.5" /></button>
+                     </div>
+                     <div className="w-[1px] h-4 bg-zinc-800"></div>
+                     <button onClick={toggleFullScreen} className="p-1.5 hover:bg-zinc-800 rounded-md text-zinc-400 hover:text-white" title={isFullScreen ? "Exit Full Screen" : "Full Screen"}>
+                        {isFullScreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                     </button>
                  </div>
              </div>
              <div className={cn("flex-1 relative bg-zinc-900/50 isolate w-full h-full overflow-hidden flex flex-col items-center transition-all", viewport !== 'desktop' && "py-4")}>
@@ -474,6 +480,7 @@ export const Editor: React.FC = () => {
     const [showHistory, setShowHistory] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [showSelectToast, setShowSelectToast] = useState(false);
+    const [isFullScreen, setIsFullScreen] = useState(false);
     
     // Header Rename State
     const activeProject = projects.find(p => p.id === activeProjectId);
@@ -1006,17 +1013,17 @@ export const Editor: React.FC = () => {
                                             onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
                                             className="flex items-center gap-1.5 px-2 py-1 hover:bg-zinc-800 rounded-md transition-colors text-xs text-zinc-400 hover:text-zinc-200 font-medium"
                                         >
-                                            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                                            <Zap className="w-3.5 h-3.5 text-purple-400" />
                                             <span>{settings.autoMode ? "Auto Mode" : (settings.activeProvider === 'openai' ? "GPT-4o" : settings.activeProvider === 'anthropic' ? "Claude 3.5" : "Gemini 2.5")}</span>
                                             {isModelMenuOpen ? <ChevronUp className="w-3 h-3 opacity-50" /> : <ChevronDown className="w-3 h-3 opacity-50" />}
                                         </button>
                                         
                                         {isModelMenuOpen && (
                                             <>
-                                                <div className="fixed inset-0 z-30" onClick={() => setIsModelMenuOpen(false)} />
-                                                <div className="absolute bottom-10 left-0 z-40 w-48 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl overflow-hidden py-1 flex flex-col">
+                                                <div className="fixed inset-0 z-40" onClick={() => setIsModelMenuOpen(false)} />
+                                                <div className="absolute bottom-10 left-0 z-50 w-48 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl overflow-hidden py-1 flex flex-col">
                                                     <button onClick={() => { updateSettings({ autoMode: !settings.autoMode }); setIsModelMenuOpen(false); }} className="px-3 py-2 text-left text-xs text-zinc-300 hover:bg-zinc-800 flex items-center justify-between">
-                                                        <span className="flex items-center gap-2"><Sparkles className="w-3.5 h-3.5 text-purple-400" /> Auto Mode</span>
+                                                        <span className="flex items-center gap-2"><Zap className="w-3.5 h-3.5 text-purple-400" /> Auto Mode</span>
                                                         {settings.autoMode && <Check className="w-3 h-3 text-blue-500" />}
                                                     </button>
                                                     <div className="h-[1px] bg-zinc-800 my-1" />
@@ -1087,7 +1094,7 @@ export const Editor: React.FC = () => {
                                 {(isDraggingExplorer || isDraggingSplit) && <div className="absolute inset-0 z-50 bg-transparent" />}
                                 <SandpackProvider template="react-ts" theme="dark" files={flattenFiles(activeProjectFiles)} style={{ height: '100%', width: '100%' }} options={{ externalResources: ["https://cdn.tailwindcss.com"], classes: { "sp-layout": "!h-full !block !rounded-none !border-0", "sp-wrapper": "!h-full" } }}>
                                     <SandpackLayout style={{ height: '100%', display: 'block' }} className="!h-full !block !rounded-none !border-0 bg-zinc-950">
-                                        <BrowserFrame />
+                                        <BrowserFrame isFullScreen={isFullScreen} toggleFullScreen={() => setIsFullScreen(!isFullScreen)} />
                                         <SandpackListener />
                                     </SandpackLayout>
                                 </SandpackProvider>
