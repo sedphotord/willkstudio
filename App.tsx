@@ -3,11 +3,12 @@ import { useStore } from './lib/store';
 import { Editor } from './components/Editor';
 import { agentManager } from './lib/ai/agents';
 import { File, Project, ViewMode, ChatAttachment } from './types';
+import { unzipToFiles } from './lib/utils';
 import { 
   Folder, Code2, Plus, Sparkles, ChevronRight, Github, Smartphone, Globe, 
   Users, Shield, Zap, Cpu, Search, Terminal, LayoutTemplate, Menu,
   LayoutDashboard, Settings, LogOut, Clock, ArrowLeft, Mail, Lock, Lightbulb,
-  Paperclip, Image as ImageIcon, X, Loader2
+  Paperclip, Image as ImageIcon, X, Loader2, Upload
 } from 'lucide-react';
 
 // --- Helper Components ---
@@ -435,10 +436,27 @@ const LoginView: React.FC = () => {
 // --- Advanced Dashboard (Studio) ---
 
 const Studio: React.FC = () => {
-  const { projects, selectProject, createProject, user, logout } = useStore();
+  const { projects, selectProject, createProject, user, logout, importProject } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const filteredProjects = projects.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  const handleImportZip = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      
+      unzipToFiles(file).then((files) => {
+          // Use filename without extension as project name
+          const name = file.name.replace(/\.[^/.]+$/, "");
+          importProject(name, files);
+      }).catch(err => {
+          console.error("Failed to import zip:", err);
+          alert("Failed to import project. Please ensure it's a valid ZIP file.");
+      });
+      
+      if (importInputRef.current) importInputRef.current.value = '';
+  };
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex font-sans overflow-hidden">
@@ -505,9 +523,21 @@ const Studio: React.FC = () => {
                     />
                 </div>
             </div>
-            <Button variant="blue" className="gap-2 rounded-lg" onClick={() => createProject()}>
-                <Plus className="w-4 h-4" /> New Project
-            </Button>
+            <div className="flex items-center gap-3">
+                <input 
+                    type="file" 
+                    accept=".zip" 
+                    ref={importInputRef} 
+                    className="hidden" 
+                    onChange={handleImportZip} 
+                />
+                <Button variant="secondary" className="gap-2 rounded-lg" onClick={() => importInputRef.current?.click()}>
+                    <Upload className="w-4 h-4" /> Import
+                </Button>
+                <Button variant="blue" className="gap-2 rounded-lg" onClick={() => createProject()}>
+                    <Plus className="w-4 h-4" /> New Project
+                </Button>
+            </div>
         </header>
 
         <div className="p-8 max-w-7xl mx-auto w-full">

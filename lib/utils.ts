@@ -131,7 +131,7 @@ export const insertFileWithPath = (files: File[], fullPath: string, content: str
     return updateLevel(files, parts, '/');
 };
 
-// --- ZIP Download Helper ---
+// --- ZIP Helpers (Upload & Download) ---
 
 export const downloadProjectAsZip = async (projectFiles: File[], projectName: string) => {
     const zip = new JSZip();
@@ -162,6 +162,32 @@ export const downloadProjectAsZip = async (projectFiles: File[], projectName: st
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+};
+
+export const unzipToFiles = async (file: Blob): Promise<File[]> => {
+    const zip = await JSZip.loadAsync(file);
+    let files: File[] = [];
+
+    // Helper: We simply use insertFileWithPath iteratively.
+    // Ideally we start with an empty array or the current structure.
+    // For a clean import, we return a new array.
+    
+    const entries = Object.keys(zip.files);
+    
+    for (const filename of entries) {
+        const zipEntry = zip.files[filename];
+        if (zipEntry.dir) continue; // Folders are created automatically by insertFileWithPath
+
+        // Simple check to ignore hidden files or non-text files if needed
+        if (filename.includes('__MACOSX') || filename.includes('.DS_Store')) continue;
+
+        const content = await zipEntry.async('string');
+        const path = filename.startsWith('/') ? filename : `/${filename}`;
+        
+        files = insertFileWithPath(files, path, content);
+    }
+
+    return files;
 };
 
 // --- CRUD Operations ---

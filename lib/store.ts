@@ -27,10 +27,11 @@ interface StoreState {
   login: () => void;
   logout: () => void;
   createProject: (initialPrompt?: string, attachments?: ChatAttachment[]) => void;
-  renameProject: (projectId: string, newName: string) => void; // New Action
+  importProject: (name: string, files: File[]) => void; // New Action for ZIP import
+  renameProject: (projectId: string, newName: string) => void;
   selectProject: (project: Project) => void;
   updateFileContent: (path: string, content: string) => void;
-  writeFile: (path: string, content: string) => void; // Robust Write Action
+  writeFile: (path: string, content: string) => void;
   toggleFolder: (path: string) => void;
   setActiveFile: (file: File | null) => void;
   addMessage: (message: ChatMessage) => void;
@@ -41,7 +42,7 @@ interface StoreState {
   updateSettings: (settings: Partial<UserSettings>) => void;
   
   // History Actions
-  saveSnapshot: (message: string) => string | null; // Returns version ID
+  saveSnapshot: (message: string) => string | null;
   restoreSnapshot: (versionId: string) => void;
   
   // File Explorer Actions
@@ -112,9 +113,9 @@ export const useStore = create<StoreState>()(
       view: 'landing',
       user: null,
       settings: {
-          activeProvider: 'gemini', // Default to Gemini
+          activeProvider: 'gemini',
           autoMode: true,
-          autoSave: true, // Default Auto Save to ON
+          autoSave: true,
           geminiApiKey: '',
           openAiApiKey: '',
           anthropicApiKey: '',
@@ -164,6 +165,26 @@ export const useStore = create<StoreState>()(
           pendingAttachments: attachments || []
         }));
       },
+
+      importProject: (name: string, files: File[]) => {
+          const newProject: Project = {
+              id: Math.random().toString(36).substr(2, 9),
+              name: name,
+              description: 'Imported from ZIP',
+              lastModified: new Date(),
+              files: files,
+              versions: []
+          };
+
+          set((state) => ({
+              projects: [newProject, ...state.projects],
+              activeProjectId: newProject.id,
+              activeProjectFiles: newProject.files,
+              view: 'editor',
+              activeFile: findFile(newProject.files, '/src/App.tsx') || newProject.files[0],
+              messages: [{ id: '1', role: 'assistant', content: `Project ${name} imported successfully.`, timestamp: new Date() }]
+          }));
+      },
       
       renameProject: (projectId, newName) => {
           set((state) => ({
@@ -179,7 +200,7 @@ export const useStore = create<StoreState>()(
           activeProjectId: project.id,
           activeProjectFiles: project.files,
           view: 'editor',
-          activeFile: findFile(project.files, '/src/App.tsx'),
+          activeFile: findFile(project.files, '/src/App.tsx') || project.files[0], // Fallback to first file if App.tsx missing
           messages: [{ id: '1', role: 'assistant', content: `Opened ${project.name}. How can I help?`, timestamp: new Date() }]
         });
       },
@@ -234,7 +255,6 @@ export const useStore = create<StoreState>()(
 
       // --- File Operations ---
 
-      // Robust Atomic Write (Handles folder creation)
       writeFile: (path, content) => {
           set((state) => {
               const newFiles = insertFileWithPath(state.activeProjectFiles, path, content);
