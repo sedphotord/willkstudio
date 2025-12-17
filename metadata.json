@@ -1,5 +1,5 @@
 {
   "name": "WillkStudio",
-  "description": "A next-generation frontend IDE powered by Gemini. Build, edit, and preview React applications directly in your browser with WillkStudio.",
+  "description": "Build, edit, and deploy React applications instantly with WillkStudio. Powered by Gemini 2.5, featuring a multi-agent AI architecture, real-time Sandpack preview, and VS Code-like editing directly in your browser.",
   "requestFramePermissions": []
 }
