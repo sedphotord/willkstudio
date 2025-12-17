@@ -5,7 +5,7 @@ import {
   Layout, Maximize2, Minimize2, PanelLeft, RefreshCw, ExternalLink, Menu,
   CheckCircle2, AlertCircle, FilePlus, MousePointer2, Lightbulb, ArrowUp, Plus,
   ChevronLeft, RotateCw, Lock, FolderPlus, Upload, Trash2, Edit2, MoreVertical, Copy,
-  ArrowLeft, Zap
+  ArrowLeft, Zap, Tablet, Smartphone
 } from 'lucide-react';
 import MonacoEditor from '@monaco-editor/react';
 import { SandpackProvider, SandpackLayout, SandpackPreview, useSandpack } from "@codesandbox/sandpack-react";
@@ -33,42 +33,112 @@ const SandpackListener = () => {
 const BrowserFrame = () => {
     // We use a key to force refresh the iframe when the refresh button is clicked
     const [refreshKey, setRefreshKey] = useState(0);
+    const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+    const [url, setUrl] = useState('localhost:3000');
+    const [isLoading, setIsLoading] = useState(false);
     
+    const handleRefresh = () => {
+        setIsLoading(true);
+        setRefreshKey(k => k + 1);
+        setTimeout(() => setIsLoading(false), 800); // Fake loading state duration
+    };
+
+    const handleUrlSubmit = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleRefresh();
+        }
+    };
+
     return (
-        <div className="flex flex-col h-full bg-zinc-950">
+        <div className="flex flex-col h-full w-full bg-zinc-950">
              {/* Browser Toolbar */}
-             <div className="h-10 bg-zinc-900 border-b border-zinc-800 flex items-center px-3 gap-3 shrink-0">
-                 <div className="flex items-center gap-1">
-                     <button className="p-1.5 hover:bg-zinc-800 rounded-md text-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
-                     <button className="p-1.5 hover:bg-zinc-800 rounded-md text-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
-                     <button 
-                        onClick={() => setRefreshKey(k => k + 1)} 
-                        className="p-1.5 hover:bg-zinc-800 rounded-md text-zinc-400 hover:text-zinc-100 transition-colors"
-                     >
-                        <RotateCw className="w-3.5 h-3.5" />
-                     </button>
-                 </div>
-                 
-                 {/* Authentic Address Bar */}
-                 <div className="flex-1 bg-zinc-950 rounded-md border border-zinc-800 h-7 flex items-center px-3 text-xs text-zinc-400 font-mono shadow-sm min-w-0 mx-2">
-                     <Lock className="w-3 h-3 mr-2 text-green-500/80" />
-                     <span className="truncate text-zinc-300">localhost:5173</span>
+             <div className="h-10 bg-zinc-900 border-b border-zinc-800 flex items-center px-3 gap-3 shrink-0 justify-between">
+                 <div className="flex items-center gap-3 flex-1 min-w-0">
+                     <div className="flex items-center gap-1 shrink-0">
+                         <button className="p-1.5 hover:bg-zinc-800 rounded-md text-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
+                         <button className="p-1.5 hover:bg-zinc-800 rounded-md text-zinc-400 hover:text-zinc-100 transition-colors disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
+                         <button 
+                            onClick={handleRefresh}
+                            className={cn(
+                                "p-1.5 hover:bg-zinc-800 rounded-md text-zinc-400 hover:text-zinc-100 transition-colors",
+                                isLoading && "animate-spin text-zinc-100"
+                            )}
+                         >
+                            <RotateCw className="w-3.5 h-3.5" />
+                         </button>
+                     </div>
+                     
+                     {/* Authentic Address Bar */}
+                     <div className="flex-1 max-w-xl bg-zinc-950 rounded-md border border-zinc-800 h-7 flex items-center px-3 text-xs text-zinc-400 font-mono shadow-sm min-w-0 group focus-within:border-blue-500/50 focus-within:ring-1 focus-within:ring-blue-500/20 transition-all">
+                         <Lock className="w-3 h-3 mr-2 text-green-500/80 shrink-0" />
+                         <input 
+                            type="text"
+                            value={url}
+                            onChange={(e) => setUrl(e.target.value)}
+                            onKeyDown={handleUrlSubmit}
+                            className="flex-1 bg-transparent border-none outline-none text-zinc-300 placeholder-zinc-600 w-full"
+                            spellCheck={false}
+                         />
+                     </div>
                  </div>
 
-                 <div className="flex items-center gap-1">
-                    <button className="p-1.5 hover:bg-zinc-800 rounded-md text-zinc-400 transition-colors"><MoreVertical className="w-3.5 h-3.5" /></button>
+                 {/* Viewport Toggles */}
+                 <div className="flex items-center gap-1 bg-zinc-950 p-0.5 rounded-lg border border-zinc-800 shrink-0">
+                    <button 
+                        onClick={() => setViewport('desktop')}
+                        className={cn(
+                            "p-1.5 rounded-md transition-all",
+                            viewport === 'desktop' ? "bg-zinc-800 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-300"
+                        )}
+                        title="Desktop View"
+                    >
+                        <Monitor className="w-3.5 h-3.5" />
+                    </button>
+                    <button 
+                        onClick={() => setViewport('tablet')}
+                        className={cn(
+                            "p-1.5 rounded-md transition-all",
+                            viewport === 'tablet' ? "bg-zinc-800 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-300"
+                        )}
+                        title="Tablet View (768px)"
+                    >
+                        <Tablet className="w-3.5 h-3.5" />
+                    </button>
+                    <button 
+                        onClick={() => setViewport('mobile')}
+                        className={cn(
+                            "p-1.5 rounded-md transition-all",
+                            viewport === 'mobile' ? "bg-zinc-800 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-300"
+                        )}
+                        title="Mobile View (375px)"
+                    >
+                        <Smartphone className="w-3.5 h-3.5" />
+                    </button>
                  </div>
              </div>
              
              {/* Preview Content */}
-             <div className="flex-1 relative bg-white isolate">
-                  <SandpackPreview 
-                      key={refreshKey}
-                      className="h-full w-full" 
-                      showOpenInCodeSandbox={false} 
-                      showRefreshButton={false}
-                      showNavigator={false}
-                  />
+             <div className={cn(
+                 "flex-1 relative bg-zinc-900/50 isolate w-full h-full overflow-hidden flex flex-col items-center transition-all",
+                 viewport !== 'desktop' && "py-4"
+             )}>
+                  <div 
+                      className={cn(
+                          "transition-all duration-300 ease-in-out bg-white overflow-hidden shadow-2xl relative",
+                          viewport === 'desktop' ? "w-full h-full" : "border-4 border-zinc-800",
+                          viewport === 'tablet' && "w-[768px] h-full rounded-xl",
+                          viewport === 'mobile' && "w-[375px] h-full rounded-2xl"
+                      )}
+                  >
+                      <SandpackPreview 
+                          key={refreshKey}
+                          style={{ height: '100%', width: '100%' }}
+                          className="!h-full !w-full" 
+                          showOpenInCodeSandbox={false} 
+                          showRefreshButton={false}
+                          showNavigator={false}
+                      />
+                  </div>
              </div>
         </div>
     );
@@ -151,16 +221,16 @@ const TerminalPanel = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
                     <span className="text-green-500">➜</span>
                     <span className="text-blue-400">project</span>
                     <span className="text-zinc-500">git:(main)</span>
-                    <span>npm run dev</span>
+                    <span>npm start</span>
                 </div>
                 <div className="text-zinc-500">
-                    &gt; vite v5.1.4 dev server running at:
+                    &gt; react-scripts start
                 </div>
                 <div className="text-zinc-500 ml-4">
-                    &gt; Local: http://localhost:5173/
+                    Starting the development server...
                 </div>
                 <div className="text-green-400 mt-2">
-                    [vite] page reload index.html
+                    Compiled successfully!
                 </div>
             </div>
         </div>
@@ -178,7 +248,8 @@ export const Editor: React.FC = () => {
     const [generating, setGenerating] = useState(false);
     const [prompt, setPrompt] = useState('');
     const [openCmd, setOpenCmd] = useState(false);
-    const [viewMode, setViewMode] = useState<'code' | 'preview' | 'split'>('split');
+    // CHANGE: Default view mode is now 'preview' for full screen sandbox
+    const [viewMode, setViewMode] = useState<'code' | 'preview' | 'split'>('preview');
     const [isTerminalOpen, setIsTerminalOpen] = useState(true);
     const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -677,7 +748,7 @@ export const Editor: React.FC = () => {
                                                     height="100%"
                                                     theme="vs-dark"
                                                     path={activeFile.path}
-                                                    defaultLanguage={activeFile.name.split('.').pop() === 'css' ? 'css' : 'typescript'}
+                                                    defaultLanguage={activeFile.name.split('.').pop() === 'css' ? 'css' : 'javascript'}
                                                     defaultValue={activeFile.content || ''}
                                                     value={activeFile.content || ''}
                                                     onChange={(val) => updateFileContent(activeFile.path, val || '')}
@@ -734,19 +805,19 @@ export const Editor: React.FC = () => {
                                 {(isDraggingExplorer || isDraggingSplit) && <div className="absolute inset-0 z-50 bg-transparent" />}
                                 
                                 <SandpackProvider 
-                                    template="vite-react"
+                                    template="react"
                                     theme="dark"
                                     files={flattenFiles(activeProjectFiles)}
+                                    style={{ height: '100%', width: '100%' }}
                                     options={{
                                         externalResources: ["https://cdn.tailwindcss.com"],
                                         classes: {
-                                            "sp-wrapper": "h-full",
-                                            "sp-layout": "h-full",
-                                            "sp-preview": "h-full"
+                                            "sp-layout": "!h-full !block !rounded-none !border-0",
+                                            "sp-wrapper": "!h-full",
                                         }
                                     }}
                                 >
-                                    <SandpackLayout className="!h-full !block !rounded-none !border-0 bg-zinc-950">
+                                    <SandpackLayout style={{ height: '100%', display: 'block' }} className="!h-full !block !rounded-none !border-0 bg-zinc-950">
                                         <BrowserFrame />
                                         <SandpackListener />
                                     </SandpackLayout>
@@ -765,7 +836,7 @@ export const Editor: React.FC = () => {
                         <div className="flex items-center gap-3">
                             <span>Ln 12, Col 34</span>
                             <span>UTF-8</span>
-                            <span>TypeScript React</span>
+                            <span>JavaScript React</span>
                             <button onClick={() => setIsTerminalOpen(!isTerminalOpen)} className="hover:bg-white/20 px-1 rounded">
                                 <TerminalIcon className="w-3 h-3" />
                             </button>

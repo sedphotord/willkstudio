@@ -1,62 +1,63 @@
-
 import { File } from './types';
 
 export const INITIAL_FILES: File[] = [
-  {
-    name: 'index.html',
-    path: '/index.html',
-    type: 'file',
-    content: `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WillkStudio App</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/index.tsx"></script>
-  </body>
-</html>`
-  },
   {
     name: 'package.json',
     path: '/package.json',
     type: 'file',
     content: `{
   "name": "willkstudio-project",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
+  "version": "1.0.0",
+  "main": "/src/index.js",
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-scripts": "^5.0.1",
     "lucide-react": "^0.344.0"
   },
-  "devDependencies": {
-    "@types/react": "^18.2.66",
-    "@types/react-dom": "^18.2.22",
-    "@vitejs/plugin-react": "^4.2.1",
-    "vite": "^4.4.5"
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }`
   },
   {
-    name: 'vite.config.ts',
-    path: '/vite.config.ts',
-    type: 'file',
-    content: `import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-// https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
-})`
+    name: 'public',
+    path: '/public',
+    type: 'folder',
+    children: [
+        {
+            name: 'index.html',
+            path: '/public/index.html',
+            type: 'file',
+            content: `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>React App</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>`
+        }
+    ]
   },
   {
     name: 'src',
@@ -64,8 +65,8 @@ export default defineConfig({
     type: 'folder',
     children: [
       {
-        name: 'App.tsx',
-        path: '/src/App.tsx',
+        name: 'App.js',
+        path: '/src/App.js',
         type: 'file',
         content: `import React from 'react';
 import { Sparkles } from 'lucide-react';
@@ -96,7 +97,7 @@ export default function App() {
       </div>
       
       <p style={{ fontSize: '1.25rem', opacity: 0.9, marginBottom: '32px' }}>
-        WillkStudio Sandbox Environment
+        WillkStudio Sandbox Environment (React JS)
       </p>
       
       <div style={{
@@ -117,38 +118,33 @@ export default function App() {
 }`
       },
       {
-        name: 'index.tsx',
-        path: '/src/index.tsx',
+        name: 'index.js',
+        path: '/src/index.js',
         type: 'file',
-        content: `import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App'
-import './index.css'
+        content: `import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import './styles.css';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
-)`
+);`
       },
       {
-        name: 'index.css',
-        path: '/src/index.css',
+        name: 'styles.css',
+        path: '/src/styles.css',
         type: 'file',
         content: `* { margin: 0; padding: 0; box-sizing: border-box; }
 body { width: 100vw; height: 100vh; overflow: hidden; }`
-      },
-      {
-        name: 'vite-env.d.ts',
-        path: '/src/vite-env.d.ts',
-        type: 'file',
-        content: `/// <reference types="vite/client" />`
       }
     ]
   }
 ];
 
-export const SYSTEM_INSTRUCTION = `You are WillkStudio, an expert senior React/Next.js engineer.
+export const SYSTEM_INSTRUCTION = `You are WillkStudio, an expert senior React engineer.
 You are running inside a web IDE. 
 Your goal is to help the user build web applications by generating code.
 
@@ -158,7 +154,7 @@ You must respond with a JSON object strictly following this schema:
   "actions": [
     {
       "type": "create" | "update" | "delete",
-      "path": "/src/App.tsx", // Full path to file
+      "path": "/src/App.js", // Full path to file
       "content": "Full content of the file"
     }
   ]
@@ -166,6 +162,7 @@ You must respond with a JSON object strictly following this schema:
 
 - Always use Tailwind CSS for styling.
 - Prefer functional components and hooks.
+- Use strictly JavaScript and JSX (.js files). Do NOT use TypeScript.
 - If the user asks to "fix" something, analyze the code and provide the full corrected file content.
 - Do not provide markdown code blocks, provide raw strings in the JSON "content" field.
 `;

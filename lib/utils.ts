@@ -6,16 +6,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// Convert hierarchical File[] to flat object for Sandpack: { "src/App.tsx": "content" }
-// Sandpack requires keys WITHOUT leading slashes.
+// Convert hierarchical File[] to flat object for Sandpack: { "/src/App.js": "content" }
 export const flattenFiles = (files: File[]): Record<string, string> => {
   const result: Record<string, string> = {};
   
   const traverse = (nodes: File[]) => {
     nodes.forEach(node => {
       if (node.type === 'file') {
-        // Remove leading slash if present (e.g., "/src/App.tsx" -> "src/App.tsx")
-        const key = node.path.startsWith('/') ? node.path.slice(1) : node.path;
+        // Sandpack's React template prefers absolute paths (e.g. "/src/App.js")
+        const key = node.path.startsWith('/') ? node.path : `/${node.path}`;
         result[key] = node.content || '';
       } else if (node.children) {
         traverse(node.children);

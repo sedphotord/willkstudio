@@ -79,7 +79,7 @@ export const useStore = create<StoreState>((set, get) => ({
       activeProjectId: project.id,
       activeProjectFiles: project.files,
       view: 'editor',
-      activeFile: findFile(project.files, '/src/App.tsx'), // Default open file
+      activeFile: findFile(project.files, '/src/App.js'), // Default open file updated to JS
       messages: [{ id: '1', role: 'assistant', content: `Opened ${project.name}. How can I help?`, timestamp: new Date() }]
     });
   },
