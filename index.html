@@ -30,6 +30,7 @@
             'slide-up': 'slide-up 0.5s ease-out',
             'blob': 'blob 7s infinite',
             'glow-pulse': 'glow-pulse 4s ease-in-out infinite',
+            'shine': 'shine 3s linear infinite',
           },
           keyframes: {
             'fade-in': {
@@ -55,6 +56,10 @@
                 borderColor: 'rgba(168, 85, 247, 0.8)', 
                 boxShadow: '0 0 30px -5px rgba(168, 85, 247, 0.5)' 
               },
+            },
+            'shine': {
+              '0%': { 'background-position': '200% center' },
+              '100%': { 'background-position': '-200% center' },
             }
           }
         }
@@ -163,17 +168,17 @@
     "react/": "https://esm.sh/react@^19.2.3/",
     "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
     "lucide-react": "https://esm.sh/lucide-react@^0.561.0",
-    "zustand": "https://esm.sh/zustand@^5.0.9",
-    "zustand/": "https://esm.sh/zustand@^5.0.9/",
-    "vite": "https://esm.sh/vite@^7.3.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "jszip": "https://esm.sh/jszip@^3.10.1",
+    "zod": "https://esm.sh/zod@^4.2.1",
     "clsx": "https://esm.sh/clsx@^2.1.1",
     "tailwind-merge": "https://esm.sh/tailwind-merge@^3.4.0",
-    "zod": "https://esm.sh/zod@^4.2.1",
-    "cmdk": "https://esm.sh/cmdk@^1.1.1",
+    "jszip": "https://esm.sh/jszip@^3.10.1",
+    "zustand": "https://esm.sh/zustand@^5.0.9",
+    "zustand/": "https://esm.sh/zustand@^5.0.9/",
     "@monaco-editor/react": "https://esm.sh/@monaco-editor/react@^4.7.0",
-    "@codesandbox/sandpack-react": "https://esm.sh/@codesandbox/sandpack-react@^2.20.0"
+    "@codesandbox/sandpack-react": "https://esm.sh/@codesandbox/sandpack-react@^2.20.0",
+    "cmdk": "https://esm.sh/cmdk@^1.1.1",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>

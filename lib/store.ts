@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Project, File, ViewMode, ChatMessage, ProjectVersion, ChatAttachment, UserSettings } from '../types';
 import { INITIAL_FILES } from '../constants';
-import { updateFileInTree, toggleFolderInTree, findFile, addNodeToTree, removeNodeFromTree, renameNodeInTree, duplicateNodeInTree } from './utils';
+import { updateFileInTree, toggleFolderInTree, findFile, addNodeToTree, removeNodeFromTree, renameNodeInTree, duplicateNodeInTree, insertFileWithPath } from './utils';
 
 interface User {
   name: string;
@@ -30,6 +30,7 @@ interface StoreState {
   renameProject: (projectId: string, newName: string) => void; // New Action
   selectProject: (project: Project) => void;
   updateFileContent: (path: string, content: string) => void;
+  writeFile: (path: string, content: string) => void; // Robust Write Action
   toggleFolder: (path: string) => void;
   setActiveFile: (file: File | null) => void;
   addMessage: (message: ChatMessage) => void;
@@ -113,6 +114,7 @@ export const useStore = create<StoreState>()(
       settings: {
           activeProvider: 'gemini', // Default to Gemini
           autoMode: true,
+          autoSave: true, // Default Auto Save to ON
           geminiApiKey: '',
           openAiApiKey: '',
           anthropicApiKey: '',
@@ -231,6 +233,22 @@ export const useStore = create<StoreState>()(
       },
 
       // --- File Operations ---
+
+      // Robust Atomic Write (Handles folder creation)
+      writeFile: (path, content) => {
+          set((state) => {
+              const newFiles = insertFileWithPath(state.activeProjectFiles, path, content);
+              const newActiveFile = state.activeFile?.path === path 
+                ? { ...state.activeFile, content } 
+                : state.activeFile;
+              
+              const updatedProjects = state.projects.map(p => 
+                 p.id === state.activeProjectId ? { ...p, files: newFiles, lastModified: new Date() } : p
+              );
+              
+              return { activeProjectFiles: newFiles, activeFile: newActiveFile, projects: updatedProjects };
+          });
+      },
 
       updateFileContent: (path, content) => {
         set((state) => {

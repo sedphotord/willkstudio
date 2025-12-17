@@ -58,6 +58,79 @@ export const findFile = (files: File[], path: string): File | null => {
   return null;
 };
 
+// --- Robust Recursive File Insertion ---
+export const insertFileWithPath = (files: File[], fullPath: string, content: string): File[] => {
+    // Ensure path starts with /
+    const normalizedPath = fullPath.startsWith('/') ? fullPath : `/${fullPath}`;
+    // Split and filter empty strings (e.g. '/src/foo' -> ['src', 'foo'])
+    const parts = normalizedPath.split('/').filter(p => p.length > 0); 
+    const fileName = parts.pop();
+
+    if (!fileName) return files; // Invalid path
+
+    // Helper to find or create folder at current level
+    const updateLevel = (currentFiles: File[], currentPathParts: string[], parentPath: string): File[] => {
+        if (currentPathParts.length === 0) {
+            // We are at the target folder, handle the file itself
+            const filePath = parentPath === '/' ? `/${fileName}` : `${parentPath}/${fileName}`;
+            const existingIndex = currentFiles.findIndex(f => f.name === fileName);
+            
+            const newFile: File = {
+                name: fileName,
+                path: filePath,
+                type: 'file',
+                content
+            };
+
+            if (existingIndex >= 0) {
+                // Update existing file
+                const newFiles = [...currentFiles];
+                newFiles[existingIndex] = { ...newFiles[existingIndex], content, path: filePath };
+                return newFiles;
+            } else {
+                // Create new file
+                return [...currentFiles, newFile].sort((a, b) => {
+                     if (a.type === b.type) return a.name.localeCompare(b.name);
+                     return a.type === 'folder' ? -1 : 1;
+                });
+            }
+        }
+
+        const [folderName, ...rest] = currentPathParts;
+        // Construct path for the current folder
+        const currentFolderPath = parentPath === '/' ? `/${folderName}` : `${parentPath}/${folderName}`;
+        const folderIndex = currentFiles.findIndex(f => f.name === folderName && f.type === 'folder');
+
+        if (folderIndex >= 0) {
+            // Folder exists, recurse into it
+            const folder = currentFiles[folderIndex];
+            const newFiles = [...currentFiles];
+            newFiles[folderIndex] = {
+                ...folder,
+                children: updateLevel(folder.children || [], rest, currentFolderPath)
+            };
+            return newFiles;
+        } else {
+            // Folder doesn't exist, create it and recurse
+            const newFolder: File = {
+                name: folderName,
+                path: currentFolderPath,
+                type: 'folder',
+                children: [],
+                isOpen: true // Auto-open created folders
+            };
+            newFolder.children = updateLevel([], rest, currentFolderPath);
+            return [...currentFiles, newFolder].sort((a, b) => {
+                 if (a.type === b.type) return a.name.localeCompare(b.name);
+                 return a.type === 'folder' ? -1 : 1;
+            });
+        }
+    };
+
+    // Start recursion from root (parentPath = '/')
+    return updateLevel(files, parts, '/');
+};
+
 // --- ZIP Download Helper ---
 
 export const downloadProjectAsZip = async (projectFiles: File[], projectName: string) => {
@@ -71,8 +144,6 @@ export const downloadProjectAsZip = async (projectFiles: File[], projectName: st
             if (node.type === 'file') {
                 zip.file(relativePath, node.content || '');
             } else if (node.type === 'folder' && node.children) {
-                // Ensure empty folders are created (optional, mostly implicit by files)
-                // zip.folder(relativePath);
                 traverse(node.children);
             }
         });
@@ -95,11 +166,9 @@ export const downloadProjectAsZip = async (projectFiles: File[], projectName: st
 
 // --- CRUD Operations ---
 
-// 1. Add Node
+// 1. Add Node (Shallow - assumes parent exists)
 export const addNodeToTree = (files: File[], parentPath: string | null, newNode: File): File[] => {
-  // If adding to root
   if (parentPath === null) {
-    // Check for duplicate at root
     if (files.some(f => f.path === newNode.path)) return files; 
     return [...files, newNode].sort((a, b) => {
         if (a.type === b.type) return a.name.localeCompare(b.name);
@@ -109,14 +178,12 @@ export const addNodeToTree = (files: File[], parentPath: string | null, newNode:
 
   return files.map(node => {
     if (node.path === parentPath && node.type === 'folder') {
-       // Check for duplicate in children
        if (node.children?.some(child => child.path === newNode.path)) return node;
-       
        const newChildren = [...(node.children || []), newNode].sort((a, b) => {
            if (a.type === b.type) return a.name.localeCompare(b.name);
            return a.type === 'folder' ? -1 : 1;
        });
-       return { ...node, children: newChildren, isOpen: true }; // Auto open folder
+       return { ...node, children: newChildren, isOpen: true }; 
     }
     if (node.children) {
       return { ...node, children: addNodeToTree(node.children, parentPath, newNode) };
@@ -137,14 +204,13 @@ export const removeNodeFromTree = (files: File[], path: string): File[] => {
     });
 };
 
-// 3. Rename Node (Recursive path update)
+// 3. Rename Node
 export const renameNodeInTree = (files: File[], oldPath: string, newName: string): File[] => {
   return files.map(node => {
     if (node.path === oldPath) {
       const parentPath = oldPath.substring(0, oldPath.lastIndexOf('/'));
       const newPath = parentPath === '' ? `/${newName}` : `${parentPath}/${newName}`;
       
-      // If it's a folder, we must recursively update the paths of all children
       let updatedChildren = node.children;
       if (node.type === 'folder' && node.children) {
          updatedChildren = updateChildrenPaths(node.children, oldPath, newPath);
@@ -160,7 +226,6 @@ export const renameNodeInTree = (files: File[], oldPath: string, newName: string
   });
 };
 
-// Helper for rename to deep update paths
 const updateChildrenPaths = (nodes: File[], oldParentPath: string, newParentPath: string): File[] => {
     return nodes.map(node => {
         const newPath = node.path.replace(oldParentPath, newParentPath);
@@ -174,18 +239,13 @@ const updateChildrenPaths = (nodes: File[], oldParentPath: string, newParentPath
 
 // 4. Duplicate Node
 export const duplicateNodeInTree = (files: File[], path: string): File[] => {
-  // First, find the node we want to duplicate
   const nodeToDuplicate = findFile(files, path);
   if (!nodeToDuplicate) return files;
 
   const parentPath = path.substring(0, path.lastIndexOf('/'));
   
-  // Create the copy logic
   const createCopy = (node: File, newParentPath: string): File => {
-    // Generate new name for root of copy (simple logic: add ' copy')
-    // For recursive children, we just need to re-base the path
     const isRootCopy = node.path === path;
-    
     let newName = node.name;
     if (isRootCopy) {
         const extIndex = node.name.lastIndexOf('.');
@@ -197,7 +257,6 @@ export const duplicateNodeInTree = (files: File[], path: string): File[] => {
     }
 
     const newPath = newParentPath === '' ? `/${newName}` : `${newParentPath}/${newName}`;
-
     let newChildren = node.children;
     if (node.children) {
         newChildren = node.children.map(child => createCopy(child, newPath));
@@ -211,14 +270,11 @@ export const duplicateNodeInTree = (files: File[], path: string): File[] => {
     };
   };
 
-  // If root level
   if (parentPath === '') {
       const copy = createCopy(nodeToDuplicate, '');
-      // Insert after the original or at end
       return [...files, copy];
   }
 
-  // If nested
   return files.map(node => {
       if (node.path === parentPath && node.children) {
            const copy = createCopy(nodeToDuplicate, parentPath);
@@ -248,19 +304,15 @@ export const checkProjectConsistency = (files: File[]): string[] => {
     const checkImports = (nodes: File[]) => {
         nodes.forEach(node => {
             if (node.type === 'file' && (node.name.endsWith('.tsx') || node.name.endsWith('.ts')) && node.content) {
-                // Regex to capture imports: import ... from 'path';
                 const importRegex = /import\s+.*?\s+from\s+['"]([^'"]+)['"]/g;
                 let match;
                 while ((match = importRegex.exec(node.content)) !== null) {
                     const importPath = match[1];
-                    // Skip library imports (no ./ or ../)
                     if (!importPath.startsWith('.')) continue;
 
-                    // Resolve path (basic resolution)
                     const currentDir = node.path.substring(0, node.path.lastIndexOf('/'));
                     const resolvedPath = resolvePath(currentDir, importPath);
 
-                    // Check exact match first
                     const possibleExtensions = ['', '.tsx', '.ts', '.js', '.jsx', '/index.tsx', '/index.ts'];
                     let found = false;
                     
@@ -284,7 +336,6 @@ export const checkProjectConsistency = (files: File[]): string[] => {
     return errors;
 };
 
-// Basic path resolver
 const resolvePath = (fromDir: string, relativePath: string): string => {
     const parts = relativePath.split('/');
     const stack = fromDir.split('/').filter(Boolean);

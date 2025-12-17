@@ -7,7 +7,7 @@ import {
   ChevronLeft, RotateCw, Lock, FolderPlus, Upload, Trash2, Edit2, MoreVertical, Copy,
   ArrowLeft, Zap, Tablet, Smartphone, FileDiff, BrainCircuit, Github, Download,
   Paperclip, Image as ImageIcon, FileText, Wrench, History, Clock, Settings, RotateCcw,
-  Check, ToggleLeft, ToggleRight, Box, Boxes, Key
+  Check, ToggleLeft, ToggleRight, Box, Boxes, Key, Save, ArrowRight
 } from 'lucide-react';
 import MonacoEditor, { DiffEditor, useMonaco } from '@monaco-editor/react';
 import { SandpackProvider, SandpackLayout, SandpackPreview, useSandpack } from "@codesandbox/sandpack-react";
@@ -90,6 +90,19 @@ const SettingsModal = ({ onClose }: { onClose: () => void }) => {
                     <div className="flex-1 p-6 overflow-y-auto custom-scrollbar bg-zinc-950/30">
                         {activeTab === 'general' && (
                             <div className="space-y-6">
+                                <div className="flex items-center justify-between p-3 bg-zinc-900 rounded-lg border border-zinc-800">
+                                    <div className="space-y-0.5">
+                                        <label className="text-sm font-medium text-zinc-200">Auto Save</label>
+                                        <p className="text-xs text-zinc-500">Automatically save changes to local storage</p>
+                                    </div>
+                                    <button 
+                                        onClick={() => setLocalSettings(prev => ({ ...prev, autoSave: !prev.autoSave }))}
+                                        className="text-zinc-400 hover:text-white transition-colors"
+                                    >
+                                        {localSettings.autoSave ? <ToggleRight className="w-8 h-8 text-green-500" /> : <ToggleLeft className="w-8 h-8 text-zinc-600" />}
+                                    </button>
+                                </div>
+
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium text-zinc-300">Custom System Instructions</label>
                                     <textarea 
@@ -245,38 +258,45 @@ const SettingsModal = ({ onClose }: { onClose: () => void }) => {
     );
 };
 
-// --- History Modal ---
+// --- Missing Components Implementation ---
+
 const HistoryModal = ({ onClose }: { onClose: () => void }) => {
     const { projects, activeProjectId, restoreSnapshot } = useStore();
     const project = projects.find(p => p.id === activeProjectId);
-
+    
     if (!project) return null;
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-zinc-900 w-full max-w-md rounded-xl border border-zinc-800 shadow-2xl flex flex-col max-h-[80vh]">
-                <div className="p-4 border-b border-zinc-800 flex justify-between items-center">
+            <div className="bg-zinc-900 w-full max-w-2xl rounded-xl border border-zinc-800 shadow-2xl flex flex-col max-h-[85vh]">
+                <div className="p-4 border-b border-zinc-800 flex justify-between items-center shrink-0">
                     <h3 className="font-semibold text-white flex items-center gap-2">
-                        <History className="w-4 h-4 text-blue-400" /> Version History
+                        <History className="w-4 h-4 text-zinc-400" /> Project History
                     </h3>
                     <button onClick={onClose}><X className="w-4 h-4 text-zinc-400 hover:text-white" /></button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
                     {project.versions.length === 0 ? (
-                        <div className="text-center py-8 text-zinc-500 text-sm">No history available yet.</div>
+                        <div className="text-center py-10 text-zinc-500">No history snapshots available.</div>
                     ) : (
-                        project.versions.map(v => (
-                            <div key={v.id} className="p-3 rounded-lg border border-zinc-800 hover:bg-zinc-800 transition-colors flex justify-between items-center group">
-                                <div>
-                                    <p className="text-sm text-zinc-200 font-medium truncate max-w-[200px]">{v.message}</p>
-                                    <p className="text-xs text-zinc-500 mt-1">{new Date(v.timestamp).toLocaleString()}</p>
+                        project.versions.map((version) => (
+                            <div key={version.id} className="flex items-start gap-4 p-4 rounded-lg bg-zinc-950 border border-zinc-800 hover:border-zinc-700 transition-colors">
+                                <div className="mt-1 w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20 shrink-0">
+                                    <Clock className="w-4 h-4 text-blue-400" />
                                 </div>
-                                <button 
-                                    onClick={() => { restoreSnapshot(v.id); onClose(); }}
-                                    className="text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                    Restore
-                                </button>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <p className="font-medium text-zinc-200 text-sm">{version.message || 'Auto-save snapshot'}</p>
+                                        <span className="text-xs text-zinc-500 whitespace-nowrap">{new Date(version.timestamp).toLocaleString()}</span>
+                                    </div>
+                                    <p className="text-xs text-zinc-500 mb-3">{version.files.length} files • {version.id.slice(-6)}</p>
+                                    <button 
+                                        onClick={() => { restoreSnapshot(version.id); onClose(); }}
+                                        className="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5"
+                                    >
+                                        <RotateCcw className="w-3 h-3" /> Restore this version
+                                    </button>
+                                </div>
                             </div>
                         ))
                     )}
@@ -286,61 +306,87 @@ const HistoryModal = ({ onClose }: { onClose: () => void }) => {
     );
 };
 
-// --- Diff Modal Component ---
-const DiffModal = ({ 
-    original, 
-    modified, 
-    language, 
-    onClose,
-    path 
-}: { 
-    original: string, 
-    modified: string, 
-    language: string, 
-    onClose: () => void,
-    path: string
-}) => {
+const DiffModal = ({ original, modified, language, path, onClose }: { original: string, modified: string, language: string, path: string, onClose: () => void }) => {
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-8">
-            <div className="bg-[#1e1e1e] w-full max-w-6xl h-[80vh] rounded-xl overflow-hidden shadow-2xl border border-zinc-800 flex flex-col">
-                <div className="h-12 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between px-4">
-                    <div className="flex items-center gap-2">
-                        <FileDiff className="w-5 h-5 text-blue-400" />
-                        <span className="font-mono text-sm text-zinc-300">{path}</span>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-8 animate-in fade-in duration-200">
+            <div className="bg-[#1e1e1e] w-full h-full max-w-6xl rounded-xl border border-zinc-800 shadow-2xl flex flex-col overflow-hidden">
+                <div className="h-12 border-b border-zinc-800 flex items-center justify-between px-4 bg-zinc-900 shrink-0">
+                    <div className="flex items-center gap-2 text-sm text-zinc-300">
+                        <FileDiff className="w-4 h-4 text-blue-400" />
+                        <span className="font-medium">Diff:</span>
+                        <span className="font-mono text-zinc-500">{path}</span>
                     </div>
-                    <button onClick={onClose} className="p-1 hover:bg-zinc-800 rounded-md text-zinc-400 hover:text-white">
-                        <X className="w-5 h-5" />
+                    <button onClick={onClose} className="p-1.5 hover:bg-zinc-800 rounded-md text-zinc-400 hover:text-white transition-colors">
+                        <X className="w-4 h-4" />
                     </button>
                 </div>
                 <div className="flex-1 relative">
-                    <DiffEditor
-                        height="100%"
-                        language={language}
-                        original={original}
-                        modified={modified}
-                        theme="vs-dark"
+                    <DiffEditor 
+                        original={original} 
+                        modified={modified} 
+                        language={language} 
+                        theme="vs-dark" 
                         options={{
                             renderSideBySide: true,
+                            readOnly: true,
                             minimap: { enabled: false },
                             scrollBeyondLastLine: false,
                             fontSize: 13,
                         }}
                     />
                 </div>
-                <div className="h-12 bg-zinc-900 border-t border-zinc-800 flex items-center justify-end px-4 gap-3">
-                    <button onClick={onClose} className="px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-md">
-                        Done
-                    </button>
+                <div className="h-10 border-t border-zinc-800 bg-zinc-900 flex items-center justify-end px-4 gap-2">
+                    <button onClick={onClose} className="px-4 py-1.5 rounded-md bg-zinc-800 text-zinc-300 text-xs font-medium hover:bg-zinc-700">Close</button>
                 </div>
             </div>
         </div>
-    );
+    )
 };
 
-// --- Browser Frame & Other Components (kept similar but condensed for brevity) ---
-// ... BrowserFrame, CommandPalette, TerminalPanel (same as previous) ...
-// Re-inserting BrowserFrame, CommandPalette, TerminalPanel for completeness
-const BrowserFrame = ({ isFullScreen, toggleFullScreen }: { isFullScreen: boolean; toggleFullScreen: () => void }) => {
+const TerminalPanel = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="h-48 border-t border-zinc-800 bg-[#09090b] flex flex-col shrink-0 animate-in slide-in-from-bottom-10 fade-in duration-200">
+           <div className="flex items-center justify-between px-4 py-2 bg-zinc-900/50 border-b border-zinc-800/50">
+               <div className="flex items-center gap-4 text-xs font-medium text-zinc-400">
+                   <span className="text-white border-b-2 border-blue-500 pb-2 -mb-2.5">Output</span>
+                   <span className="hover:text-zinc-200 cursor-pointer">Terminal</span>
+                   <span className="hover:text-zinc-200 cursor-pointer">Problems</span>
+               </div>
+               <div className="flex items-center gap-2">
+                    <button onClick={onClose}><X className="w-3.5 h-3.5 text-zinc-500 hover:text-white" /></button>
+               </div>
+           </div>
+           <div className="flex-1 p-3 font-mono text-xs text-zinc-400 overflow-y-auto font-medium">
+              <div className="flex gap-2">
+                  <span className="text-green-500">➜</span>
+                  <span className="text-blue-400">~</span>
+                  <span className="text-zinc-300">npm run dev</span>
+              </div>
+              <div className="mt-2 text-zinc-500">
+                  <span className="text-green-400">VITE v5.1.4</span> <span className="text-zinc-500">ready in 345 ms</span>
+              </div>
+              <div className="mt-2 flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                      <span className="font-bold text-white">➜</span>
+                      <span className="font-bold text-white">Local:</span>
+                      <span className="text-blue-400 hover:underline cursor-pointer">http://localhost:5173/</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                      <span className="font-bold text-white">➜</span>
+                      <span className="font-bold text-white">Network:</span>
+                      <span className="text-zinc-500">use --host to expose</span>
+                  </div>
+              </div>
+              <div className="mt-4 text-zinc-500">
+                  <span className="text-blue-400">i</span> <span className="text-zinc-400">press h + enter to show help</span>
+              </div>
+           </div>
+        </div>
+    )
+};
+
+const BrowserFrame = ({ isFullScreen, toggleFullScreen }: { isFullScreen: boolean, toggleFullScreen: () => void }) => {
     const [refreshKey, setRefreshKey] = useState(0);
     const [viewport, setViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
     const [url, setUrl] = useState('localhost:3000');
@@ -353,103 +399,149 @@ const BrowserFrame = ({ isFullScreen, toggleFullScreen }: { isFullScreen: boolea
     };
 
     return (
-        <div className={cn("flex flex-col h-full w-full bg-zinc-950", isFullScreen && "fixed inset-0 z-[200]")}>
-             <div className="h-10 bg-zinc-900 border-b border-zinc-800 flex items-center px-3 gap-3 shrink-0 justify-between">
+        <div className={cn(
+            "flex flex-col h-full w-full bg-zinc-950 border-l border-zinc-800 transition-all duration-300",
+            isFullScreen && "fixed inset-0 z-[100] border-0"
+        )}>
+            {/* Header */}
+            <div className="h-11 bg-[#18181b] border-b border-zinc-800 flex items-center px-4 gap-4 shrink-0 justify-between select-none">
+                 {/* Left: Traffic Lights & Navigation */}
                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                     <div className="flex items-center gap-1 shrink-0">
-                         <div className="flex gap-1.5">
-                            <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50"></div>
-                            <div className="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/50"></div>
-                            <div className="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/50"></div>
-                         </div>
-                         <div className="h-4 w-[1px] bg-zinc-800 mx-2"></div>
+                     {/* Window Controls */}
+                     <div className="flex items-center gap-1.5 shrink-0 opacity-60 hover:opacity-100 transition-opacity">
+                        <div className="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e]"></div>
+                        <div className="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123]"></div>
+                        <div className="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29]"></div>
+                     </div>
+                     
+                     <div className="w-[1px] h-4 bg-zinc-700 mx-1 opacity-50"></div>
+
+                     {/* Navigation Icons */}
+                     <div className="flex items-center gap-1 text-zinc-400">
+                         <button className="p-1 hover:bg-zinc-800 rounded-md hover:text-white transition-colors"><ArrowLeft className="w-3.5 h-3.5" /></button>
+                         <button className="p-1 hover:bg-zinc-800 rounded-md hover:text-white transition-colors"><ArrowRight className="w-3.5 h-3.5" /></button>
                          <button 
                             onClick={handleRefresh}
-                            className={cn("p-1.5 hover:bg-zinc-800 rounded-md text-zinc-400 hover:text-zinc-100 transition-colors", isLoading && "animate-spin")}
+                            className={cn("p-1 hover:bg-zinc-800 rounded-md hover:text-white transition-colors", isLoading && "animate-spin")}
                          >
                             <RotateCw className="w-3.5 h-3.5" />
                          </button>
                      </div>
-                     <div className="flex-1 max-w-xl bg-zinc-950 rounded-md border border-zinc-800 h-7 flex items-center px-3 text-xs text-zinc-400 font-mono shadow-sm">
-                         <Lock className="w-3 h-3 mr-2 text-green-500/80 shrink-0" />
-                         <span className="truncate">{url}</span>
+
+                     {/* Address Bar */}
+                     <div className="flex-1 max-w-xl bg-zinc-900/50 hover:bg-zinc-900 rounded-md border border-zinc-700/50 hover:border-zinc-600 h-7 flex items-center px-3 text-xs text-zinc-400 font-sans transition-all group shadow-inner">
+                         <Lock className="w-3 h-3 mr-2 text-zinc-500 group-hover:text-zinc-400 shrink-0" />
+                         <span className="truncate group-hover:text-zinc-200">preview.willkstudio.dev</span>
                      </div>
                  </div>
-                 <div className="flex items-center gap-2">
-                     <div className="flex items-center gap-1 bg-zinc-950 p-0.5 rounded-lg border border-zinc-800 shrink-0">
-                        <button onClick={() => setViewport('desktop')} className={cn("p-1.5 rounded-md", viewport === 'desktop' ? "bg-zinc-800 text-white" : "text-zinc-500")}><Monitor className="w-3.5 h-3.5" /></button>
-                        <button onClick={() => setViewport('tablet')} className={cn("p-1.5 rounded-md", viewport === 'tablet' ? "bg-zinc-800 text-white" : "text-zinc-500")}><Tablet className="w-3.5 h-3.5" /></button>
-                        <button onClick={() => setViewport('mobile')} className={cn("p-1.5 rounded-md", viewport === 'mobile' ? "bg-zinc-800 text-white" : "text-zinc-500")}><Smartphone className="w-3.5 h-3.5" /></button>
+
+                 {/* Right: Viewport Controls */}
+                 <div className="flex items-center gap-3">
+                     <div className="flex items-center bg-zinc-900/50 p-0.5 rounded-lg border border-zinc-800 shrink-0">
+                        <button onClick={() => setViewport('desktop')} className={cn("p-1.5 rounded-md transition-all", viewport === 'desktop' ? "bg-zinc-700 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-300")} title="Desktop"><Monitor className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => setViewport('tablet')} className={cn("p-1.5 rounded-md transition-all", viewport === 'tablet' ? "bg-zinc-700 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-300")} title="Tablet"><Tablet className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => setViewport('mobile')} className={cn("p-1.5 rounded-md transition-all", viewport === 'mobile' ? "bg-zinc-700 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-300")} title="Mobile"><Smartphone className="w-3.5 h-3.5" /></button>
                      </div>
-                     <div className="w-[1px] h-4 bg-zinc-800"></div>
-                     <button onClick={toggleFullScreen} className="p-1.5 hover:bg-zinc-800 rounded-md text-zinc-400 hover:text-white" title={isFullScreen ? "Exit Full Screen" : "Full Screen"}>
-                        {isFullScreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                     <div className="w-[1px] h-4 bg-zinc-700 opacity-30"></div>
+                     <button onClick={toggleFullScreen} className="p-1.5 hover:bg-zinc-800 rounded-md text-zinc-500 hover:text-white transition-colors" title={isFullScreen ? "Exit Full Screen" : "Full Screen"}>
+                        {isFullScreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                      </button>
                  </div>
-             </div>
-             <div className={cn("flex-1 relative bg-zinc-900/50 isolate w-full h-full overflow-hidden flex flex-col items-center transition-all", viewport !== 'desktop' && "py-4")}>
-                  <div className={cn("transition-all duration-300 ease-in-out bg-white overflow-hidden shadow-2xl relative", viewport === 'desktop' ? "w-full h-full" : "border-4 border-zinc-800", viewport === 'tablet' && "w-[768px] h-full rounded-xl", viewport === 'mobile' && "w-[375px] h-full rounded-2xl")}>
-                      <SandpackPreview key={refreshKey} style={{ height: '100%', width: '100%' }} className="!h-full !w-full" showOpenInCodeSandbox={false} showRefreshButton={false} showNavigator={false} />
+            </div>
+            
+            {/* Content Area with Viewport Resizing */}
+            <div className={cn("flex-1 relative bg-zinc-900/50 isolate w-full h-full overflow-hidden flex flex-col items-center transition-all", viewport !== 'desktop' && "py-8")}>
+                  <div className={cn(
+                      "transition-all duration-300 ease-in-out bg-white overflow-hidden shadow-2xl relative", 
+                      viewport === 'desktop' ? "w-full h-full" : "border-[6px] border-zinc-800 ring-1 ring-white/10",
+                      viewport === 'tablet' && "w-[768px] h-full rounded-xl", 
+                      viewport === 'mobile' && "w-[375px] h-full rounded-[2rem]"
+                  )}>
+                      <SandpackPreview 
+                        key={refreshKey} 
+                        style={{ height: '100%', width: '100%' }} 
+                        className="!h-full !w-full" 
+                        showOpenInCodeSandbox={false} 
+                        showRefreshButton={false} 
+                        showNavigator={false} 
+                      />
                   </div>
-             </div>
+            </div>
         </div>
     );
 };
 
-const CommandPalette = ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => {
-    const { activeProjectFiles, setActiveFile } = useStore();
+const CommandPalette = ({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) => {
+    const { activeProjectFiles, setActiveFile, projects, selectProject } = useStore();
     const [search, setSearch] = useState('');
-    const getAllFiles = (nodes: File[]): File[] => {
-        let results: File[] = [];
-        nodes.forEach(node => {
-            if (node.type === 'file') results.push(node);
-            if (node.children) results = [...results, ...getAllFiles(node.children)];
-        });
-        return results;
-    };
-    const files = getAllFiles(activeProjectFiles);
+
     useEffect(() => {
         const down = (e: KeyboardEvent) => {
-            if (e.key === 'k' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); onOpenChange(!open); }
-        };
+            if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                onOpenChange(!open);
+            }
+        }
         document.addEventListener('keydown', down);
         return () => document.removeEventListener('keydown', down);
     }, [open, onOpenChange]);
+    
+    // Helper to flatten files for search
+    const allFiles: File[] = [];
+    const traverse = (nodes: File[]) => {
+        nodes.forEach(n => {
+            if (n.type === 'file') allFiles.push(n);
+            if (n.children) traverse(n.children);
+        });
+    }
+    traverse(activeProjectFiles);
+
     if (!open) return null;
+
     return (
-        <Command.Dialog open={open} onOpenChange={onOpenChange} label="Command Menu">
-            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" cmdk-overlay="">
-                <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 shadow-2xl" cmdk-root="">
-                    <Command.Input value={search} onValueChange={setSearch} placeholder="Search files..." cmdk-input="" />
-                    <Command.List className="max-h-[300px] overflow-y-auto p-2">
-                        <Command.Empty cmdk-empty="">No results found.</Command.Empty>
-                        <Command.Group heading="Files" className="text-xs font-medium text-zinc-500 px-2 py-1.5">
-                            {files.map(file => (
-                                <Command.Item key={file.path} onSelect={() => { setActiveFile(file); onOpenChange(false); }} cmdk-item="">
-                                    <FileCode className="mr-2 h-4 w-4" /> {file.name} <span className="ml-auto text-xs text-zinc-600">{file.path}</span>
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] bg-black/50 backdrop-blur-sm" onClick={() => onOpenChange(false)}>
+            <div className="w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100" onClick={e => e.stopPropagation()}>
+                <Command className="w-full">
+                    <div className="flex items-center border-b border-zinc-800 px-3">
+                        <Search className="w-4 h-4 text-zinc-500 mr-2" />
+                        <Command.Input 
+                            value={search}
+                            onValueChange={setSearch}
+                            placeholder="Search files or commands..." 
+                            className="flex-1 h-12 bg-transparent outline-none text-zinc-200 placeholder:text-zinc-500 text-sm"
+                        />
+                    </div>
+                    <Command.List className="max-h-[300px] overflow-y-auto p-2 scrollbar-none">
+                        <Command.Empty className="py-6 text-center text-sm text-zinc-500">No results found.</Command.Empty>
+                        
+                        <Command.Group heading="Files" className="text-xs text-zinc-500 font-medium mb-2 px-2">
+                             {allFiles.map(file => (
+                                 <Command.Item 
+                                    key={file.path} 
+                                    onSelect={() => { setActiveFile(file); onOpenChange(false); }}
+                                    className="flex items-center gap-2 px-2 py-2 rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-white cursor-pointer transition-colors text-sm aria-selected:bg-zinc-800 aria-selected:text-white"
+                                 >
+                                     <FileCode className="w-4 h-4 text-zinc-500" />
+                                     <span>{file.name}</span>
+                                     <span className="ml-auto text-xs text-zinc-600">{file.path}</span>
+                                 </Command.Item>
+                             ))}
+                        </Command.Group>
+                        
+                        <Command.Group heading="Projects" className="text-xs text-zinc-500 font-medium mb-2 px-2 mt-2">
+                            {projects.map(p => (
+                                <Command.Item 
+                                    key={p.id}
+                                    onSelect={() => { selectProject(p); onOpenChange(false); }}
+                                     className="flex items-center gap-2 px-2 py-2 rounded-md text-zinc-300 hover:bg-zinc-800 hover:text-white cursor-pointer transition-colors text-sm aria-selected:bg-zinc-800 aria-selected:text-white"
+                                >
+                                    <Box className="w-4 h-4 text-blue-500" />
+                                    <span>{p.name}</span>
                                 </Command.Item>
                             ))}
                         </Command.Group>
                     </Command.List>
-                </div>
-            </div>
-        </Command.Dialog>
-    );
-};
-
-const TerminalPanel = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
-    if (!isOpen) return null;
-    return (
-        <div className="h-40 bg-[#09090b] border-t border-zinc-800 flex flex-col font-mono text-sm">
-            <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-800 bg-zinc-900/50">
-                <div className="flex items-center gap-2"><TerminalIcon className="w-4 h-4 text-zinc-400" /><span className="text-zinc-400 text-xs uppercase tracking-wider font-semibold">Terminal</span></div>
-                <button onClick={onClose}><X className="w-4 h-4 text-zinc-500 hover:text-zinc-300" /></button>
-            </div>
-            <div className="flex-1 p-4 overflow-y-auto text-zinc-300 space-y-1">
-                <div className="flex gap-2"><span className="text-green-500">➜</span><span className="text-blue-400">project</span><span className="text-zinc-500">git:(main)</span><span>npm start</span></div>
-                <div className="text-zinc-500">&gt; react-scripts start</div>
-                <div className="text-zinc-500 ml-4">Starting the development server...</div>
-                <div className="text-green-400 mt-2">Compiled successfully!</div>
+                </Command>
             </div>
         </div>
     );
@@ -462,7 +554,8 @@ export const Editor: React.FC = () => {
         updateFileContent, addMessage, setActiveFile, toggleFolder, setView,
         addFile, deleteFile, renameFile, duplicateFile, renameProject,
         pendingPrompt, setPendingPrompt, pendingAttachments, setPendingAttachments,
-        saveSnapshot, restoreSnapshot, updateMessageVersion, settings, updateSettings
+        saveSnapshot, restoreSnapshot, updateMessageVersion, settings, updateSettings,
+        writeFile // Using the new robust write action
     } = useStore();
 
     const [generating, setGenerating] = useState(false);
@@ -482,6 +575,9 @@ export const Editor: React.FC = () => {
     const [showSelectToast, setShowSelectToast] = useState(false);
     const [isFullScreen, setIsFullScreen] = useState(false);
     
+    // Saving State
+    const [isSaving, setIsSaving] = useState(false);
+    
     // Header Rename State
     const activeProject = projects.find(p => p.id === activeProjectId);
     const [isRenamingProject, setIsRenamingProject] = useState(false);
@@ -491,8 +587,8 @@ export const Editor: React.FC = () => {
     const consistencyErrors = useMemo(() => checkProjectConsistency(activeProjectFiles), [activeProjectFiles]);
     const hasErrors = consistencyErrors.length > 0;
 
-    const monacoRef = useRef<any>(null); // Store monaco instance
-    const editorRef = useRef<any>(null); // Store editor instance
+    const monacoRef = useRef<any>(null); 
+    const editorRef = useRef<any>(null); 
 
     const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -505,18 +601,16 @@ export const Editor: React.FC = () => {
 
     // Layout State
     const [explorerWidth, setExplorerWidth] = useState(240);
-    const [chatWidth, setChatWidth] = useState(360);
-    const [editorRatio, setEditorRatio] = useState(0.5); // 0.5 = 50%
+    const [chatWidth, setChatWidth] = useState(450); // UPDATED DEFAULT WIDTH TO 450
+    const [editorRatio, setEditorRatio] = useState(0.5); 
     const [isDraggingExplorer, setIsDraggingExplorer] = useState(false);
     const [isDraggingChat, setIsDraggingChat] = useState(false);
     const [isDraggingSplit, setIsDraggingSplit] = useState(false);
 
-    // Update project name input when active project changes
     useEffect(() => {
         if (activeProject) setProjectNameInput(activeProject.name);
     }, [activeProjectId, activeProject]);
 
-    // Load initial suggestions and handle pending prompt/attachments
     useEffect(() => {
         if (pendingAttachments.length > 0) {
             setAttachments(pendingAttachments);
@@ -543,7 +637,7 @@ export const Editor: React.FC = () => {
         return () => document.removeEventListener('click', closeMenu);
     }, []);
 
-    // Layout resizing
+    // Layout resizing ... (kept same)
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (isDraggingChat) {
@@ -591,6 +685,14 @@ export const Editor: React.FC = () => {
         setIsRenamingProject(false);
     };
 
+    const handleManualSave = () => {
+        setIsSaving(true);
+        setTimeout(() => {
+            setIsSaving(false);
+            saveSnapshot("Manual Save");
+        }, 500);
+    };
+
     const handleSendMessage = async (customPrompt?: string, isAutoFix: boolean = false) => {
         const textToSend = customPrompt || prompt;
         if (!textToSend.trim() && attachments.length === 0 && !isAutoFix) return;
@@ -633,23 +735,13 @@ export const Editor: React.FC = () => {
             const context = JSON.stringify(currentFiles, null, 2);
             const response = await agentManager.processRequest(userMsg.content, context, userMsg.attachments);
             
-            // Apply Actions
+            // Apply Actions with Robust writeFile
             response.actions.forEach(action => {
                 if (action.type === 'delete') deleteFile(action.path);
                 if (action.type === 'create' || action.type === 'update') {
                     if (action.content && action.path) {
-                        const existingFile = findFile(activeProjectFiles, action.path);
-                        if (existingFile) {
-                            updateFileContent(action.path, action.content);
-                        } else {
-                            const pathParts = action.path.split('/');
-                            const fileName = pathParts.pop();
-                            const folderPath = pathParts.join('/') || null; 
-                            if (fileName) {
-                                addFile(folderPath, fileName, 'file');
-                                setTimeout(() => updateFileContent(action.path, action.content!), 10);
-                            }
-                        }
+                        // Use the new atomic action that handles deep folder creation
+                        writeFile(action.path, action.content);
                     }
                 }
             });
@@ -676,7 +768,7 @@ export const Editor: React.FC = () => {
         }
     };
     
-    // --- Auto Fix Logic ---
+    // --- Auto Fix Logic --- (kept same)
     useEffect(() => {
         if (generating) return;
         if (messages.length === 0) return;
@@ -692,6 +784,8 @@ export const Editor: React.FC = () => {
         }
     }, [messages, generating, activeProjectFiles]);
 
+    // ... handleAttachmentUpload, handleSelectCode, handleManualAutoFix, etc ...
+    // (Rest of the component logic remains the same, just reusing functions)
     const handleAttachmentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (!files) return;
@@ -723,7 +817,7 @@ export const Editor: React.FC = () => {
             if (selection && !selection.isEmpty()) {
                 snippet = model.getValueInRange(selection);
             } else {
-                snippet = model.getValue(); // Fallback to full file if no selection
+                snippet = model.getValue(); 
             }
         } else if (activeFile?.content) {
             snippet = activeFile.content;
@@ -732,8 +826,6 @@ export const Editor: React.FC = () => {
         if (snippet) {
             const formatted = `Referencing file ${activeFile?.path}:\n\`\`\`\n${snippet}\n\`\`\``;
             setPrompt(prev => prev + (prev ? '\n' : '') + formatted);
-            
-            // Show toast feedback
             setShowSelectToast(true);
             setTimeout(() => setShowSelectToast(false), 2000);
         }
@@ -771,7 +863,6 @@ export const Editor: React.FC = () => {
         });
     };
 
-    // Explorer Actions (Duplicate, Delete, etc. - kept identical to previous implementation)
     const handleContextMenu = (e: React.MouseEvent, file: File) => {
         e.preventDefault(); e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, file });
     };
@@ -821,6 +912,7 @@ export const Editor: React.FC = () => {
             {/* Context Menu */}
             {contextMenu && (
                 <div className="fixed z-[9999] bg-zinc-900 border border-zinc-800 rounded-md shadow-xl py-1 min-w-[140px]" style={{ top: contextMenu.y, left: contextMenu.x }}>
+                    {/* ... Context menu items (create, rename, delete) ... */}
                     <button onClick={(e) => { e.stopPropagation(); setRenamingPath(contextMenu.file.path); setContextMenu(null); }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-zinc-800 text-zinc-300 flex items-center gap-2"><Edit2 className="w-3.5 h-3.5" /> Rename</button>
                     <button onClick={(e) => { e.stopPropagation(); duplicateFile(contextMenu.file.path); setContextMenu(null); }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-zinc-800 text-zinc-300 flex items-center gap-2"><Copy className="w-3.5 h-3.5" /> Duplicate</button>
                     <button onClick={(e) => { e.stopPropagation(); deleteFile(contextMenu.file.path); setContextMenu(null); }} className="w-full text-left px-3 py-1.5 text-xs hover:bg-zinc-800 text-red-400 flex items-center gap-2"><Trash2 className="w-3.5 h-3.5" /> Delete</button>
@@ -835,10 +927,21 @@ export const Editor: React.FC = () => {
             
             {/* Top Navigation Bar */}
             <header className="h-12 bg-zinc-950 border-b border-zinc-800 flex items-center justify-between px-4 shrink-0 z-20">
+                {/* ... Header Content (Back btn, Title, View Toggle, Export) ... */}
                 <div className="flex items-center gap-4">
-                    <button onClick={() => setView('dashboard')} className="hover:bg-zinc-800 p-1.5 rounded-md transition-colors flex items-center gap-2 text-zinc-400 hover:text-white" title="Back to Dashboard"><ArrowLeft className="w-4 h-4" /><Zap className="w-5 h-5 text-blue-500 fill-blue-500" /></button>
+                    <button onClick={() => setView('dashboard')} className="hover:bg-zinc-800 p-1.5 rounded-md transition-colors flex items-center gap-2 text-zinc-400 hover:text-white" title="Back to Dashboard">
+                        <ArrowLeft className="w-4 h-4" />
+                    </button>
                     <div className="flex items-center gap-2 text-sm">
-                        <span className="text-zinc-500">willkstudio /</span>
+                        <span className={cn(
+                            "transition-all duration-300",
+                            generating 
+                                ? "font-bold text-transparent bg-clip-text bg-gradient-to-r from-zinc-600 via-white to-zinc-600 bg-[length:200%_auto] animate-shine" 
+                                : "text-zinc-500"
+                        )}>
+                            willkstudio
+                        </span>
+                        <span className="text-zinc-600">/</span>
                         {isRenamingProject ? (
                             <input 
                                 type="text" 
@@ -878,10 +981,29 @@ export const Editor: React.FC = () => {
                 
                 {/* Left Panel: Chat */}
                 <div className="bg-zinc-950 flex flex-col border-r border-zinc-800 shrink-0 relative z-10" style={{ width: chatWidth }}>
-                     {/* Chat Header */}
+                     {/* Chat Header ... */}
                      <div className="h-10 border-b border-zinc-800 flex items-center justify-between px-3 bg-zinc-900/50 backdrop-blur-sm">
                          <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">AI Assistant</span>
                          <div className="flex items-center gap-1">
+                             {/* ... Header buttons (save, settings, etc) ... */}
+                             <button 
+                                onClick={() => updateSettings({ autoSave: !settings.autoSave })}
+                                className="p-1.5 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white transition-colors" 
+                                title={settings.autoSave ? "Auto Save: ON" : "Auto Save: OFF"}
+                             >
+                                {settings.autoSave ? <ToggleRight className="w-4 h-4 text-green-500" /> : <ToggleLeft className="w-4 h-4 text-zinc-500" />}
+                             </button>
+
+                             <button 
+                                onClick={handleManualSave}
+                                className={cn("p-1.5 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white transition-colors", isSaving && "text-blue-400")}
+                                title="Save Project"
+                             >
+                                <Save className={cn("w-3.5 h-3.5", isSaving && "animate-bounce")} />
+                             </button>
+
+                             <div className="w-[1px] h-3 bg-zinc-800 mx-1"></div>
+
                              <button onClick={() => setShowSettings(true)} className="p-1.5 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white" title="Settings"><Settings className="w-3.5 h-3.5" /></button>
                              <button onClick={() => setShowHistory(true)} className="p-1.5 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white" title="History"><History className="w-3.5 h-3.5" /></button>
                              <button 
@@ -902,7 +1024,6 @@ export const Editor: React.FC = () => {
                                 {msg.role === 'assistant' && (
                                     <div className="flex items-center justify-between w-full">
                                         <div className="flex items-center gap-2 mb-1">
-                                            <div className="w-5 h-5 rounded-full bg-blue-600/20 flex items-center justify-center border border-blue-500/30"><Bot className="w-3 h-3 text-blue-400" /></div>
                                             <span className="text-xs font-medium text-zinc-400">WillkStudio</span>
                                         </div>
                                         {msg.versionId && (
@@ -917,6 +1038,7 @@ export const Editor: React.FC = () => {
                                     </div>
                                 )}
                                 
+                                {/* ... Messages Rendering ... */}
                                 {msg.reasoning && (
                                     <div className="w-full mb-1">
                                         <details className="group">
@@ -970,6 +1092,7 @@ export const Editor: React.FC = () => {
                         <div ref={chatEndRef} />
                     </div>
                     
+                    {/* ... Input Area ... */}
                     {/* Suggestions Chips */}
                     {!generating && suggestions.length > 0 && (
                         <div className="px-4 pb-2 flex gap-2 overflow-x-auto scrollbar-none">
@@ -1011,37 +1134,46 @@ export const Editor: React.FC = () => {
                                     <div className="relative">
                                         <button 
                                             onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
-                                            className="flex items-center gap-1.5 px-2 py-1 hover:bg-zinc-800 rounded-md transition-colors text-xs text-zinc-400 hover:text-zinc-200 font-medium"
+                                            className={cn(
+                                                "flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all text-xs font-medium border border-transparent",
+                                                isModelMenuOpen ? "bg-zinc-800 text-white" : "hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200",
+                                                settings.autoMode && "text-purple-400 bg-purple-500/10 border-purple-500/20 hover:bg-purple-500/20"
+                                            )}
                                         >
-                                            <Zap className="w-3.5 h-3.5 text-purple-400" />
-                                            <span>{settings.autoMode ? "Auto Mode" : (settings.activeProvider === 'openai' ? "GPT-4o" : settings.activeProvider === 'anthropic' ? "Claude 3.5" : "Gemini 2.5")}</span>
-                                            {isModelMenuOpen ? <ChevronUp className="w-3 h-3 opacity-50" /> : <ChevronDown className="w-3 h-3 opacity-50" />}
+                                            {settings.autoMode ? <Sparkles className="w-3.5 h-3.5" /> : <Box className="w-3.5 h-3.5" />}
+                                            <span>
+                                                {settings.autoMode 
+                                                    ? "Auto Mode" 
+                                                    : (settings.activeProvider === 'openai' ? "GPT-4o" : settings.activeProvider === 'anthropic' ? "Claude 3.5" : "Gemini 2.5")
+                                                }
+                                            </span>
+                                            <ChevronDown className={cn("w-3 h-3 opacity-50 transition-transform", isModelMenuOpen && "rotate-180")} />
                                         </button>
                                         
                                         {isModelMenuOpen && (
                                             <>
                                                 <div className="fixed inset-0 z-40" onClick={() => setIsModelMenuOpen(false)} />
-                                                <div className="absolute bottom-10 left-0 z-50 w-48 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl overflow-hidden py-1 flex flex-col">
-                                                    <button onClick={() => { updateSettings({ autoMode: !settings.autoMode }); setIsModelMenuOpen(false); }} className="px-3 py-2 text-left text-xs text-zinc-300 hover:bg-zinc-800 flex items-center justify-between">
-                                                        <span className="flex items-center gap-2"><Zap className="w-3.5 h-3.5 text-purple-400" /> Auto Mode</span>
-                                                        {settings.autoMode && <Check className="w-3 h-3 text-blue-500" />}
+                                                <div className="absolute bottom-10 left-0 z-50 w-52 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl overflow-hidden py-1 flex flex-col animate-slide-up">
+                                                    <div className="px-3 py-1.5 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Model Selection</div>
+                                                    
+                                                    <button onClick={() => { updateSettings({ autoMode: true }); setIsModelMenuOpen(false); }} className={cn("px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-zinc-800 transition-colors", settings.autoMode ? "text-purple-400 bg-purple-500/5" : "text-zinc-300")}>
+                                                        <span className="flex items-center gap-2"><Sparkles className="w-3.5 h-3.5" /> Auto Mode</span>
+                                                        {settings.autoMode && <Check className="w-3 h-3" />}
                                                     </button>
-                                                    <div className="h-[1px] bg-zinc-800 my-1" />
-                                                    <button onClick={() => { updateSettings({ autoMode: false, activeProvider: 'gemini' }); setIsModelMenuOpen(false); }} className="px-3 py-2 text-left text-xs text-zinc-300 hover:bg-zinc-800 flex items-center justify-between">
-                                                        <span className="flex items-center gap-2"><Box className="w-3.5 h-3.5 text-blue-400" /> Gemini 2.5</span>
-                                                        {!settings.autoMode && settings.activeProvider === 'gemini' && <Check className="w-3 h-3 text-blue-500" />}
+                                                    
+                                                    <div className="h-[1px] bg-zinc-800 my-1 mx-2" />
+                                                    
+                                                    <button onClick={() => { updateSettings({ autoMode: false, activeProvider: 'gemini' }); setIsModelMenuOpen(false); }} className={cn("px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-zinc-800 transition-colors", !settings.autoMode && settings.activeProvider === 'gemini' ? "text-blue-400 bg-blue-500/5" : "text-zinc-300")}>
+                                                        <span className="flex items-center gap-2"><Box className="w-3.5 h-3.5" /> Gemini 2.5 Flash</span>
+                                                        {!settings.autoMode && settings.activeProvider === 'gemini' && <Check className="w-3 h-3" />}
                                                     </button>
-                                                    <button onClick={() => { updateSettings({ autoMode: false, activeProvider: 'openai' }); setIsModelMenuOpen(false); }} className="px-3 py-2 text-left text-xs text-zinc-300 hover:bg-zinc-800 flex items-center justify-between">
-                                                        <span className="flex items-center gap-2"><Bot className="w-3.5 h-3.5 text-green-400" /> GPT-4o</span>
-                                                        {!settings.autoMode && settings.activeProvider === 'openai' && <Check className="w-3 h-3 text-blue-500" />}
+                                                    <button onClick={() => { updateSettings({ autoMode: false, activeProvider: 'openai' }); setIsModelMenuOpen(false); }} className={cn("px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-zinc-800 transition-colors", !settings.autoMode && settings.activeProvider === 'openai' ? "text-green-400 bg-green-500/5" : "text-zinc-300")}>
+                                                        <span className="flex items-center gap-2"><Bot className="w-3.5 h-3.5" /> GPT-4o</span>
+                                                        {!settings.autoMode && settings.activeProvider === 'openai' && <Check className="w-3 h-3" />}
                                                     </button>
-                                                    <button onClick={() => { updateSettings({ autoMode: false, activeProvider: 'anthropic' }); setIsModelMenuOpen(false); }} className="px-3 py-2 text-left text-xs text-zinc-300 hover:bg-zinc-800 flex items-center justify-between">
-                                                        <span className="flex items-center gap-2"><Boxes className="w-3.5 h-3.5 text-orange-400" /> Claude 3.5</span>
-                                                        {!settings.autoMode && settings.activeProvider === 'anthropic' && <Check className="w-3 h-3 text-blue-500" />}
-                                                    </button>
-                                                    <div className="h-[1px] bg-zinc-800 my-1" />
-                                                    <button onClick={() => { setShowSettings(true); setIsModelMenuOpen(false); }} className="px-3 py-2 text-left text-xs text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 flex items-center gap-2">
-                                                        <Settings className="w-3.5 h-3.5" /> Configure Keys...
+                                                    <button onClick={() => { updateSettings({ autoMode: false, activeProvider: 'anthropic' }); setIsModelMenuOpen(false); }} className={cn("px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-zinc-800 transition-colors", !settings.autoMode && settings.activeProvider === 'anthropic' ? "text-orange-400 bg-orange-500/5" : "text-zinc-300")}>
+                                                        <span className="flex items-center gap-2"><Boxes className="w-3.5 h-3.5" /> Claude 3.5 Sonnet</span>
+                                                        {!settings.autoMode && settings.activeProvider === 'anthropic' && <Check className="w-3 h-3" />}
                                                     </button>
                                                 </div>
                                             </>
@@ -1063,9 +1195,10 @@ export const Editor: React.FC = () => {
                     <div className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500/50 transition-colors z-20" onMouseDown={(e) => { e.preventDefault(); setIsDraggingChat(true); }}></div>
                 </div>
 
-                {/* Right Panel: Workbench */}
+                {/* Right Panel: Workbench ... */}
                 <div className="flex-1 flex flex-col min-w-0 bg-[#09090b]">
                     <div className="flex-1 flex overflow-hidden relative">
+                        {/* ... Editor / Sandpack / Panels ... (Kept same) */}
                         {(viewMode === 'code' || viewMode === 'split') && (
                             <div className="flex flex-col border-r border-zinc-800 shrink-0" style={{ width: viewMode === 'split' ? `${editorRatio * 100}%` : '100%', maxWidth: viewMode === 'split' ? '90%' : '100%', minWidth: viewMode === 'split' ? '10%' : '100%' }}>
                                 <div className="flex-1 flex min-h-0">

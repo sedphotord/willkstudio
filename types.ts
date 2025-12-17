@@ -64,6 +64,7 @@ export interface UserSettings {
   mistralApiKey?: string;
   
   // Preferences
+  autoSave: boolean; // New Auto-Save Toggle
   customInstructions?: string;
   languagePreference: 'typescript' | 'javascript';
 }
