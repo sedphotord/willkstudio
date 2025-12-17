@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /editor
+
+Sitemap: https://willkstudio.com/sitemap.xml
