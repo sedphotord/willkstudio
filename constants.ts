@@ -8,12 +8,17 @@ export const INITIAL_FILES: File[] = [
     content: `{
   "name": "willkstudio-project",
   "version": "1.0.0",
-  "main": "/src/index.js",
+  "main": "/src/index.tsx",
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "^5.0.1",
     "lucide-react": "^0.344.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "typescript": "^4.9.5"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -65,8 +70,8 @@ export const INITIAL_FILES: File[] = [
     type: 'folder',
     children: [
       {
-        name: 'App.js',
-        path: '/src/App.js',
+        name: 'App.tsx',
+        path: '/src/App.tsx',
         type: 'file',
         content: `import React from 'react';
 import { Sparkles } from 'lucide-react';
@@ -97,7 +102,7 @@ export default function App() {
       </div>
       
       <p style={{ fontSize: '1.25rem', opacity: 0.9, marginBottom: '32px' }}>
-        WillkStudio Sandbox Environment (React JS)
+        WillkStudio Sandbox Environment (React TSX)
       </p>
       
       <div style={{
@@ -118,15 +123,18 @@ export default function App() {
 }`
       },
       {
-        name: 'index.js',
-        path: '/src/index.js',
+        name: 'index.tsx',
+        path: '/src/index.tsx',
         type: 'file',
         content: `import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './styles.css';
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
+const rootElement = document.getElementById('root');
+if (!rootElement) throw new Error('Failed to find the root element');
+const root = ReactDOM.createRoot(rootElement);
+
 root.render(
   <React.StrictMode>
     <App />
@@ -139,12 +147,18 @@ root.render(
         type: 'file',
         content: `* { margin: 0; padding: 0; box-sizing: border-box; }
 body { width: 100vw; height: 100vh; overflow: hidden; }`
+      },
+      {
+        name: 'vite-env.d.ts',
+        path: '/src/vite-env.d.ts',
+        type: 'file',
+        content: `/// <reference types="vite/client" />`
       }
     ]
   }
 ];
 
-export const SYSTEM_INSTRUCTION = `You are WillkStudio, an expert senior React engineer.
+export const SYSTEM_INSTRUCTION = `You are WillkStudio, an expert senior React engineer specialized in TypeScript.
 You are running inside a web IDE. 
 Your goal is to help the user build web applications by generating code.
 
@@ -154,15 +168,21 @@ You must respond with a JSON object strictly following this schema:
   "actions": [
     {
       "type": "create" | "update" | "delete",
-      "path": "/src/App.js", // Full path to file
+      "path": "/src/App.tsx", // Full path to file
       "content": "Full content of the file"
     }
   ]
 }
 
+CRITICAL RULES FOR FILE MANAGEMENT:
+1. **REVIEW FIRST**: Look at the "Current File Context" provided in the prompt.
+2. **NO DUPLICATES**: If a file path already exists (e.g., "/src/App.tsx"), you MUST use "type": "update". NEVER use "create" for an existing file.
+3. **OVERWRITE ROOT**: If the user asks for a new app, a new design, or a different component, you MUST "update" "/src/App.tsx" with the new code. Do not create "App2.tsx". Destroy the old content of App.tsx and replace it entirely.
+4. **IMPORTS**: Ensure all imports point to files that actually exist in the file tree.
+
+TECHNICAL PREFERENCES:
 - Always use Tailwind CSS for styling.
 - Prefer functional components and hooks.
-- Use strictly JavaScript and JSX (.js files). Do NOT use TypeScript.
-- If the user asks to "fix" something, analyze the code and provide the full corrected file content.
+- Use strictly TypeScript and TSX (.tsx files). 
 - Do not provide markdown code blocks, provide raw strings in the JSON "content" field.
 `;

@@ -13,7 +13,7 @@ import { Command } from 'cmdk';
 import { File, ChatMessage } from '../types';
 import { generateCode } from '../services/geminiService';
 import { useStore } from '../lib/store';
-import { flattenFiles, cn } from '../lib/utils';
+import { flattenFiles, cn, findFile } from '../lib/utils';
 import { FileTreeNode, FileTreeInput } from './FileTreeNode';
 
 // --- Sandpack Listener ---
@@ -331,11 +331,37 @@ export const Editor: React.FC = () => {
         try {
             const response = await generateCode(userMsg.content, context);
             
-            // Apply updates
+            // Smart Action Handling
+            // We check if the file exists before deciding to update or create
+            // This prevents duplicate file errors if the AI hallucinates the "type"
             response.actions.forEach(action => {
-                if (action.type === 'update' || action.type === 'create') {
+                if (action.type === 'delete') {
+                    deleteFile(action.path);
+                    return;
+                }
+
+                if (action.type === 'create' || action.type === 'update') {
                     if (action.content && action.path) {
-                        updateFileContent(action.path, action.content);
+                        const existingFile = findFile(activeProjectFiles, action.path);
+                        
+                        if (existingFile) {
+                            // If file exists, ALWAYS treat as update, even if AI said create
+                            updateFileContent(action.path, action.content);
+                        } else {
+                            // If file does NOT exist, create it first
+                            const pathParts = action.path.split('/');
+                            const fileName = pathParts.pop();
+                            const folderPath = pathParts.join('/') || null; // e.g. "/src"
+                            
+                            if (fileName) {
+                                // Add the node to the tree
+                                addFile(folderPath, fileName, 'file');
+                                // Then update its content (store actions might be sync, but good to separate)
+                                setTimeout(() => {
+                                    updateFileContent(action.path, action.content!);
+                                }, 0);
+                            }
+                        }
                     }
                 }
             });
@@ -748,7 +774,12 @@ export const Editor: React.FC = () => {
                                                     height="100%"
                                                     theme="vs-dark"
                                                     path={activeFile.path}
-                                                    defaultLanguage={activeFile.name.split('.').pop() === 'css' ? 'css' : 'javascript'}
+                                                    defaultLanguage={
+                                                        activeFile.name.endsWith('.css') ? 'css' :
+                                                        activeFile.name.endsWith('.html') ? 'html' :
+                                                        activeFile.name.endsWith('.json') ? 'json' :
+                                                        'typescript'
+                                                    }
                                                     defaultValue={activeFile.content || ''}
                                                     value={activeFile.content || ''}
                                                     onChange={(val) => updateFileContent(activeFile.path, val || '')}
@@ -805,7 +836,7 @@ export const Editor: React.FC = () => {
                                 {(isDraggingExplorer || isDraggingSplit) && <div className="absolute inset-0 z-50 bg-transparent" />}
                                 
                                 <SandpackProvider 
-                                    template="react"
+                                    template="react-ts"
                                     theme="dark"
                                     files={flattenFiles(activeProjectFiles)}
                                     style={{ height: '100%', width: '100%' }}

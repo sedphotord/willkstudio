@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { SYSTEM_INSTRUCTION } from '../constants';
 import { AIResponseSchema, ValidatedAIResponse } from '../lib/schemas';
+import { File } from '../types';
 
 let client: GoogleGenAI | null = null;
 
@@ -16,6 +17,24 @@ const getClient = () => {
   return client;
 };
 
+// Helper to list just paths for the AI to "Review"
+const getFilePaths = (filesStr: string): string => {
+    try {
+        const files = JSON.parse(filesStr) as File[];
+        const paths: string[] = [];
+        const traverse = (nodes: File[]) => {
+            nodes.forEach(n => {
+                paths.push(n.path);
+                if(n.children) traverse(n.children);
+            });
+        };
+        traverse(files);
+        return paths.join('\n');
+    } catch {
+        return "Unable to parse file list";
+    }
+}
+
 export const generateCode = async (
   userPrompt: string, 
   currentFilesContext: string
@@ -25,12 +44,21 @@ export const generateCode = async (
     throw new Error("API Key is missing. Please configure your environment.");
   }
 
+  const filePaths = getFilePaths(currentFilesContext);
+
   const prompt = `
-    Current File Context:
+    REVIEW THESE EXISTING FILES CAREFULLY:
+    ${filePaths}
+
+    FULL FILE CONTEXT (Content):
     ${currentFilesContext}
 
-    User Request:
+    USER REQUEST:
     ${userPrompt}
+
+    INSTRUCTIONS:
+    - If the user wants a new app, OVERWRITE /src/App.tsx.
+    - Check the list above. If a file exists, use 'update'. If not, use 'create'.
   `;
 
   try {
