@@ -8,11 +8,20 @@ export interface File {
   children?: File[];
 }
 
+export interface ProjectVersion {
+  id: string;
+  timestamp: Date;
+  message: string;
+  files: File[];
+}
+
 export interface Project {
   id: string;
   name: string;
+  description?: string;
   lastModified: Date;
   files: File[];
+  versions: ProjectVersion[];
 }
 
 export interface AIAction {
@@ -21,17 +30,46 @@ export interface AIAction {
   content?: string;
 }
 
+export interface ChatAttachment {
+  type: 'image' | 'text' | 'file';
+  mimeType: string;
+  name: string;
+  data: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: Date;
-  actions?: AIAction[]; // Added to support "Actions taken" UI
+  reasoning?: string;
+  actions?: AIAction[];
+  attachments?: ChatAttachment[];
+  versionId?: string; // Links this message to a specific project snapshot
 }
 
 export type ViewMode = 'landing' | 'login' | 'dashboard' | 'editor';
 
+export type AIProvider = 'auto' | 'gemini' | 'openai' | 'anthropic' | 'mistral';
+
+export interface UserSettings {
+  // Provider Settings
+  activeProvider: AIProvider;
+  autoMode: boolean; // Toggle for automatic selection logic
+  
+  // API Keys
+  geminiApiKey?: string;
+  openAiApiKey?: string;
+  anthropicApiKey?: string;
+  mistralApiKey?: string;
+  
+  // Preferences
+  customInstructions?: string;
+  languagePreference: 'typescript' | 'javascript';
+}
+
 export interface AIResponse {
+  reasoning?: string;
   message: string;
   actions: AIAction[];
 }

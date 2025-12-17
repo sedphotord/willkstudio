@@ -28,6 +28,8 @@
           animation: {
             'fade-in': 'fade-in 0.5s ease-out',
             'slide-up': 'slide-up 0.5s ease-out',
+            'blob': 'blob 7s infinite',
+            'glow-pulse': 'glow-pulse 4s ease-in-out infinite',
           },
           keyframes: {
             'fade-in': {
@@ -38,6 +40,22 @@
               '0%': { transform: 'translateY(10px)', opacity: '0' },
               '100%': { transform: 'translateY(0)', opacity: '1' },
             },
+            blob: {
+              '0%': { transform: 'translate(0px, 0px) scale(1)' },
+              '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+              '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+              '100%': { transform: 'translate(0px, 0px) scale(1)' },
+            },
+            'glow-pulse': {
+              '0%, 100%': { 
+                borderColor: 'rgba(59, 130, 246, 0.5)', 
+                boxShadow: '0 0 20px -5px rgba(59, 130, 246, 0.3)' 
+              },
+              '50%': { 
+                borderColor: 'rgba(168, 85, 247, 0.8)', 
+                boxShadow: '0 0 30px -5px rgba(168, 85, 247, 0.5)' 
+              },
+            }
           }
         }
       }
@@ -153,8 +171,10 @@
     "cmdk": "https://esm.sh/cmdk@1.0.4?deps=react@18.3.1,react-dom@18.3.1",
     "clsx": "https://esm.sh/clsx",
     "tailwind-merge": "https://esm.sh/tailwind-merge",
+    "jszip": "https://esm.sh/jszip@3.10.1",
     "vite": "https://esm.sh/vite@^7.3.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "zustand/": "https://esm.sh/zustand@^5.0.9/"
   }
 }
 </script>

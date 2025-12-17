@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useStore } from './lib/store';
 import { Editor } from './components/Editor';
-import { File, Project, ViewMode } from './types';
+import { agentManager } from './lib/ai/agents';
+import { File, Project, ViewMode, ChatAttachment } from './types';
 import { 
   Folder, Code2, Plus, Sparkles, ChevronRight, Github, Smartphone, Globe, 
   Users, Shield, Zap, Cpu, Search, Terminal, LayoutTemplate, Menu,
-  LayoutDashboard, Settings, LogOut, Clock, ArrowLeft, Mail, Lock
+  LayoutDashboard, Settings, LogOut, Clock, ArrowLeft, Mail, Lock, Lightbulb,
+  Paperclip, Image as ImageIcon, X, Loader2
 } from 'lucide-react';
 
 // --- Helper Components ---
@@ -47,15 +49,73 @@ const GlowCard: React.FC<{ children: React.ReactNode; className?: string; delay?
 // --- Landing Page (Bolt.new Style) ---
 
 const LandingPage: React.FC = () => {
-  const { setView } = useStore();
-  const onStart = () => setView('login');
+  const { setView, createProject } = useStore();
+  const [prompt, setPrompt] = useState('');
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
+  const [planning, setPlanning] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const onStart = () => {
+      // If we have a prompt, create project with prompt, otherwise just go to login/dashboard or empty project
+      if (prompt.trim() || attachments.length > 0) {
+          createProject(prompt, attachments);
+      } else {
+          setView('login');
+      }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          onStart();
+      }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (!files) return;
+
+      Array.from(files).forEach(file => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+              const result = e.target?.result as string;
+              const isImage = file.type.startsWith('image/');
+              setAttachments(prev => [...prev, {
+                  name: file.name,
+                  mimeType: file.type,
+                  type: isImage ? 'image' : 'file',
+                  data: result
+              }]);
+          };
+          if (file.type.startsWith('image/')) {
+              reader.readAsDataURL(file);
+          } else {
+              reader.readAsText(file);
+          }
+      });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleEnhancePrompt = async () => {
+      if (!prompt.trim()) return;
+      setPlanning(true);
+      try {
+          const enhanced = await agentManager.enhancePrompt(prompt);
+          setPrompt(enhanced);
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setPlanning(false);
+      }
+  };
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans overflow-x-hidden relative selection:bg-blue-500/30" style={{ zoom: '90%' }}>
-      {/* Background Glow Effects */}
+      {/* Background Glow Effects with Animation */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-blue-600/20 blur-[120px] rounded-full opacity-50 mix-blend-screen"></div>
-          <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-indigo-500/10 blur-[100px] rounded-full opacity-30"></div>
+          <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-blue-600/20 blur-[120px] rounded-full opacity-50 mix-blend-screen animate-blob"></div>
+          <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-indigo-500/10 blur-[100px] rounded-full opacity-30 animate-blob" style={{ animationDelay: '2s' }}></div>
+          <div className="absolute top-[10%] left-[30%] w-[600px] h-[400px] bg-purple-500/10 blur-[100px] rounded-full opacity-30 animate-blob" style={{ animationDelay: '4s' }}></div>
           <div className="absolute bottom-0 left-0 w-full h-[500px] bg-gradient-to-t from-zinc-950 to-transparent"></div>
       </div>
 
@@ -76,7 +136,7 @@ const LandingPage: React.FC = () => {
            <div className="hidden md:flex items-center gap-4">
                <Github className="w-5 h-5 hover:text-white cursor-pointer transition-colors" />
            </div>
-           <Button variant="secondary" onClick={onStart} className="rounded-full px-5">Sign In</Button>
+           <Button variant="secondary" onClick={() => setView('login')} className="rounded-full px-5">Sign In</Button>
         </div>
       </header>
       
@@ -99,18 +159,50 @@ const LandingPage: React.FC = () => {
                 Prompt, click, and deploy. Build production-ready React applications at lightspeed with our intelligent IDE.
             </p>
 
-            {/* Search/Prompt Box */}
-            <div className="w-full max-w-3xl relative group mb-20">
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/30 to-purple-500/30 rounded-xl blur opacity-30 group-hover:opacity-50 transition duration-500"></div>
-                <div className="relative bg-zinc-900/90 backdrop-blur-xl border border-white/10 rounded-xl p-4 shadow-2xl">
+            {/* Search/Prompt Box with Glow Effect (No Rotation) */}
+            <div className="w-full max-w-3xl relative mb-20 group">
+                <div className="relative bg-zinc-900/90 backdrop-blur-xl rounded-xl p-4 shadow-2xl h-full border animate-glow-pulse transition-all duration-300">
                     <textarea 
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                        onKeyDown={handleKeyDown}
                         className="w-full bg-transparent text-lg text-zinc-200 placeholder-zinc-500 focus:outline-none resize-none h-24 mb-4 font-light"
                         placeholder="Create a landing page for a coffee shop with a modern dark theme..."
                     />
+                    
+                    {/* Attachments Preview */}
+                    {attachments.length > 0 && (
+                        <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-none">
+                            {attachments.map((att, i) => (
+                                <div key={i} className="relative group/att bg-zinc-800 rounded-lg p-2 flex items-center gap-2 min-w-[120px] border border-zinc-700">
+                                    {att.type === 'image' ? <ImageIcon className="w-4 h-4 text-purple-400"/> : <Paperclip className="w-4 h-4 text-blue-400"/>}
+                                    <span className="text-xs truncate max-w-[100px]">{att.name}</span>
+                                    <button 
+                                        onClick={() => setAttachments(prev => prev.filter((_, idx) => idx !== i))}
+                                        className="absolute -top-1.5 -right-1.5 bg-zinc-700 rounded-full p-0.5 hover:bg-red-500 transition-colors"
+                                    >
+                                        <X className="w-3 h-3 text-white" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <Button variant="secondary" className="h-8 rounded-md bg-zinc-800/50 border border-white/5 text-zinc-400 hover:text-zinc-200">
+                            <input type="file" ref={fileInputRef} className="hidden" multiple onChange={handleFileUpload} />
+                            <Button onClick={() => fileInputRef.current?.click()} variant="secondary" className="h-8 rounded-md bg-zinc-800/50 border border-white/5 text-zinc-400 hover:text-zinc-200">
                                 <Plus className="w-4 h-4 mr-2" /> Add context
+                            </Button>
+                            
+                            <Button 
+                                onClick={handleEnhancePrompt} 
+                                disabled={planning || !prompt.trim()}
+                                variant="secondary" 
+                                className="h-8 rounded-md bg-zinc-800/50 border border-white/5 text-zinc-400 hover:text-zinc-200"
+                            >
+                                {planning ? <Loader2 className="w-4 h-4 animate-spin mr-2"/> : <Lightbulb className="w-4 h-4 mr-2" />}
+                                Plan
                             </Button>
                         </div>
                         <div className="flex items-center gap-3">
@@ -413,7 +505,7 @@ const Studio: React.FC = () => {
                     />
                 </div>
             </div>
-            <Button variant="blue" className="gap-2 rounded-lg" onClick={createProject}>
+            <Button variant="blue" className="gap-2 rounded-lg" onClick={() => createProject()}>
                 <Plus className="w-4 h-4" /> New Project
             </Button>
         </header>
@@ -424,7 +516,7 @@ const Studio: React.FC = () => {
                 <h2 className="text-lg font-semibold text-white mb-4">Start from a template</h2>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     {['SaaS Dashboard', 'E-commerce', 'Portfolio', 'Landing Page'].map((t, i) => (
-                        <div key={i} onClick={createProject} className="group cursor-pointer bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-800/80 rounded-xl p-4 transition-all">
+                        <div key={i} onClick={() => createProject(`Create a ${t}`)} className="group cursor-pointer bg-zinc-900 border border-zinc-800 hover:border-blue-500/50 hover:bg-zinc-800/80 rounded-xl p-4 transition-all">
                              <div className={`w-10 h-10 rounded-lg mb-3 flex items-center justify-center ${
                                  i === 0 ? 'bg-purple-500/20 text-purple-400' : 
                                  i === 1 ? 'bg-green-500/20 text-green-400' :
@@ -467,9 +559,9 @@ const Studio: React.FC = () => {
                                         <h3 className="font-medium text-zinc-100 group-hover:text-blue-400 transition-colors">{p.name}</h3>
                                         <div className="px-2 py-0.5 rounded-full bg-zinc-800 border border-zinc-700 text-[10px] text-zinc-400">Public</div>
                                     </div>
-                                    <div className="flex items-center gap-4 text-xs text-zinc-500 mt-4">
-                                        <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {p.lastModified.toLocaleDateString()}</span>
-                                        <span className="flex items-center gap-1"><Cpu className="w-3.5 h-3.5" /> v18.3.1</span>
+                                    <p className="text-xs text-zinc-500 line-clamp-2 mb-4 h-8">{p.description || "No description"}</p>
+                                    <div className="flex items-center gap-4 text-xs text-zinc-500">
+                                        <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {new Date(p.lastModified).toLocaleDateString()}</span>
                                     </div>
                                 </div>
                             </div>

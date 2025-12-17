@@ -1,6 +1,8 @@
+
 import { File } from '../types';
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import JSZip from 'jszip';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -54,6 +56,41 @@ export const findFile = (files: File[], path: string): File | null => {
     }
   }
   return null;
+};
+
+// --- ZIP Download Helper ---
+
+export const downloadProjectAsZip = async (projectFiles: File[], projectName: string) => {
+    const zip = new JSZip();
+
+    const traverse = (nodes: File[]) => {
+        nodes.forEach(node => {
+            // Remove leading slash for ZIP structure
+            const relativePath = node.path.startsWith('/') ? node.path.slice(1) : node.path;
+            
+            if (node.type === 'file') {
+                zip.file(relativePath, node.content || '');
+            } else if (node.type === 'folder' && node.children) {
+                // Ensure empty folders are created (optional, mostly implicit by files)
+                // zip.folder(relativePath);
+                traverse(node.children);
+            }
+        });
+    };
+
+    traverse(projectFiles);
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    
+    // Trigger download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${projectName}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 };
 
 // --- CRUD Operations ---
@@ -192,4 +229,74 @@ export const duplicateNodeInTree = (files: File[], path: string): File[] => {
       }
       return node;
   });
+};
+
+// --- Auto-Fix / Consistency Check ---
+
+export const checkProjectConsistency = (files: File[]): string[] => {
+    const errors: string[] = [];
+    const existingPaths = new Set<string>();
+
+    const traverse = (nodes: File[]) => {
+        nodes.forEach(node => {
+            existingPaths.add(node.path);
+            if (node.children) traverse(node.children);
+        });
+    };
+    traverse(files);
+
+    const checkImports = (nodes: File[]) => {
+        nodes.forEach(node => {
+            if (node.type === 'file' && (node.name.endsWith('.tsx') || node.name.endsWith('.ts')) && node.content) {
+                // Regex to capture imports: import ... from 'path';
+                const importRegex = /import\s+.*?\s+from\s+['"]([^'"]+)['"]/g;
+                let match;
+                while ((match = importRegex.exec(node.content)) !== null) {
+                    const importPath = match[1];
+                    // Skip library imports (no ./ or ../)
+                    if (!importPath.startsWith('.')) continue;
+
+                    // Resolve path (basic resolution)
+                    const currentDir = node.path.substring(0, node.path.lastIndexOf('/'));
+                    const resolvedPath = resolvePath(currentDir, importPath);
+
+                    // Check exact match first
+                    const possibleExtensions = ['', '.tsx', '.ts', '.js', '.jsx', '/index.tsx', '/index.ts'];
+                    let found = false;
+                    
+                    for (const ext of possibleExtensions) {
+                        if (existingPaths.has(resolvedPath + ext)) {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found) {
+                        errors.push(`File ${node.path} imports "${importPath}" (resolved: ${resolvedPath}), but it does not exist.`);
+                    }
+                }
+            }
+            if (node.children) checkImports(node.children);
+        });
+    };
+
+    checkImports(files);
+    return errors;
+};
+
+// Basic path resolver
+const resolvePath = (fromDir: string, relativePath: string): string => {
+    const parts = relativePath.split('/');
+    const stack = fromDir.split('/').filter(Boolean);
+
+    for (const part of parts) {
+        if (part === '.') continue;
+        if (part === '..') {
+            stack.pop();
+        } else {
+            stack.push(part);
+        }
+    }
+
+    return '/' + stack.join('/');
 };
