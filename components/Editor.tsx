@@ -11,7 +11,7 @@ import MonacoEditor from '@monaco-editor/react';
 import { SandpackProvider, SandpackLayout, SandpackPreview, useSandpack } from "@codesandbox/sandpack-react";
 import { Command } from 'cmdk';
 import { File, ChatMessage } from '../types';
-import { generateCode } from '../services/geminiService';
+import { agentManager } from '../lib/ai/agents';
 import { useStore } from '../lib/store';
 import { flattenFiles, cn, findFile } from '../lib/utils';
 import { FileTreeNode, FileTreeInput } from './FileTreeNode';
@@ -329,7 +329,8 @@ export const Editor: React.FC = () => {
         const context = JSON.stringify(activeProjectFiles, null, 2);
 
         try {
-            const response = await generateCode(userMsg.content, context);
+            // REPLACED: Direct service call with AgentManager
+            const response = await agentManager.processRequest(userMsg.content, context);
             
             // Smart Action Handling
             // We check if the file exists before deciding to update or create

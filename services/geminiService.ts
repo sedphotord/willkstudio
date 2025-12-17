@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { SYSTEM_INSTRUCTION } from '../constants';
+import { BASE_SYSTEM_PROMPT as SYSTEM_INSTRUCTION } from '../lib/ai/prompts';
 import { AIResponseSchema, ValidatedAIResponse } from '../lib/schemas';
 import { File } from '../types';
 
