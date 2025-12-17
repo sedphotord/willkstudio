@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Project, File, ViewMode, ChatMessage, ProjectVersion, ChatAttachment, UserSettings } from '../types';
 import { INITIAL_FILES } from '../constants';
-import { updateFileInTree, toggleFolderInTree, findFile, addNodeToTree, removeNodeFromTree, renameNodeInTree, duplicateNodeInTree, insertFileWithPath } from './utils';
+import { updateFileInTree, toggleFolderInTree, findFile, addNodeToTree, removeNodeFromTree, renameNodeInTree, duplicateNodeInTree, insertFileWithPath, toggleAllFoldersInTree } from './utils';
 
 interface User {
   name: string;
@@ -27,12 +27,13 @@ interface StoreState {
   login: () => void;
   logout: () => void;
   createProject: (initialPrompt?: string, attachments?: ChatAttachment[]) => void;
-  importProject: (name: string, files: File[]) => void; // New Action for ZIP import
+  importProject: (name: string, files: File[]) => void;
   renameProject: (projectId: string, newName: string) => void;
   selectProject: (project: Project) => void;
   updateFileContent: (path: string, content: string) => void;
   writeFile: (path: string, content: string) => void;
   toggleFolder: (path: string) => void;
+  toggleAllFolders: (isOpen: boolean) => void; // New Action
   setActiveFile: (file: File | null) => void;
   addMessage: (message: ChatMessage) => void;
   updateMessageVersion: (messageId: string, versionId: string) => void;
@@ -287,6 +288,12 @@ export const useStore = create<StoreState>()(
         set((state) => ({
           activeProjectFiles: toggleFolderInTree(state.activeProjectFiles, path)
         }));
+      },
+
+      toggleAllFolders: (isOpen) => {
+          set((state) => ({
+              activeProjectFiles: toggleAllFoldersInTree(state.activeProjectFiles, isOpen)
+          }));
       },
 
       setActiveFile: (file) => set({ activeFile: file }),

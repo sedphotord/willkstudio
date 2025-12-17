@@ -8,6 +8,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Helper to normalize paths (always start with / and no double slashes)
+export const normalizePath = (path: string): string => {
+    let cleanPath = path.replace(/\/+/g, '/'); // Remove double slashes
+    if (!cleanPath.startsWith('/')) {
+        cleanPath = `/${cleanPath}`;
+    }
+    // Remove trailing slash if it's not root
+    if (cleanPath.length > 1 && cleanPath.endsWith('/')) {
+        cleanPath = cleanPath.slice(0, -1);
+    }
+    return cleanPath;
+};
+
 // Convert hierarchical File[] to flat object for Sandpack: { "/src/App.js": "content" }
 export const flattenFiles = (files: File[]): Record<string, string> => {
   const result: Record<string, string> = {};
@@ -15,8 +28,7 @@ export const flattenFiles = (files: File[]): Record<string, string> => {
   const traverse = (nodes: File[]) => {
     nodes.forEach(node => {
       if (node.type === 'file') {
-        // Sandpack's React template prefers absolute paths (e.g. "/src/App.js")
-        const key = node.path.startsWith('/') ? node.path : `/${node.path}`;
+        const key = normalizePath(node.path);
         result[key] = node.content || '';
       } else if (node.children) {
         traverse(node.children);
@@ -46,6 +58,20 @@ export const toggleFolderInTree = (files: File[], path: string): File[] => {
   });
 };
 
+// Helper to toggle ALL folders
+export const toggleAllFoldersInTree = (files: File[], isOpen: boolean): File[] => {
+    return files.map(f => {
+        if (f.type === 'folder') {
+            return {
+                ...f,
+                isOpen,
+                children: f.children ? toggleAllFoldersInTree(f.children, isOpen) : []
+            };
+        }
+        return f;
+    });
+};
+
 // Helper to find a file in tree
 export const findFile = (files: File[], path: string): File | null => {
   for (const f of files) {
@@ -60,8 +86,9 @@ export const findFile = (files: File[], path: string): File | null => {
 
 // --- Robust Recursive File Insertion ---
 export const insertFileWithPath = (files: File[], fullPath: string, content: string): File[] => {
-    // Ensure path starts with /
-    const normalizedPath = fullPath.startsWith('/') ? fullPath : `/${fullPath}`;
+    // Normalize path to prevent duplicates
+    const normalizedPath = normalizePath(fullPath);
+    
     // Split and filter empty strings (e.g. '/src/foo' -> ['src', 'foo'])
     const parts = normalizedPath.split('/').filter(p => p.length > 0); 
     const fileName = parts.pop();
@@ -168,21 +195,17 @@ export const unzipToFiles = async (file: Blob): Promise<File[]> => {
     const zip = await JSZip.loadAsync(file);
     let files: File[] = [];
 
-    // Helper: We simply use insertFileWithPath iteratively.
-    // Ideally we start with an empty array or the current structure.
-    // For a clean import, we return a new array.
-    
     const entries = Object.keys(zip.files);
     
     for (const filename of entries) {
         const zipEntry = zip.files[filename];
-        if (zipEntry.dir) continue; // Folders are created automatically by insertFileWithPath
+        if (zipEntry.dir) continue; 
 
-        // Simple check to ignore hidden files or non-text files if needed
         if (filename.includes('__MACOSX') || filename.includes('.DS_Store')) continue;
 
         const content = await zipEntry.async('string');
-        const path = filename.startsWith('/') ? filename : `/${filename}`;
+        // Ensure path starts with /
+        const path = normalizePath(filename);
         
         files = insertFileWithPath(files, path, content);
     }

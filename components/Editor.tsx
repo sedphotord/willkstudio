@@ -7,7 +7,7 @@ import {
   ChevronLeft, RotateCw, Lock, FolderPlus, Upload, Trash2, Edit2, MoreVertical, Copy,
   ArrowLeft, Zap, Tablet, Smartphone, FileDiff, BrainCircuit, Github, Download,
   Paperclip, Image as ImageIcon, FileText, Wrench, History, Clock, Settings, RotateCcw,
-  Check, ToggleLeft, ToggleRight, Box, Boxes, Key, Save, ArrowRight
+  Check, ToggleLeft, ToggleRight, Box, Boxes, Key, Save, ArrowRight, ChevronsDown, ChevronsUp
 } from 'lucide-react';
 import MonacoEditor, { DiffEditor, useMonaco } from '@monaco-editor/react';
 import { SandpackProvider, SandpackLayout, SandpackPreview, useSandpack } from "@codesandbox/sandpack-react";
@@ -441,7 +441,7 @@ export const Editor: React.FC = () => {
     // I am including the full component to ensure consistency and prevent lost code.
     const { 
         activeProjectFiles, activeFile, activeProjectId, messages, projects,
-        updateFileContent, addMessage, setActiveFile, toggleFolder, setView,
+        updateFileContent, addMessage, setActiveFile, toggleFolder, toggleAllFolders, setView,
         addFile, deleteFile, renameFile, duplicateFile, renameProject,
         pendingPrompt, setPendingPrompt, pendingAttachments, setPendingAttachments,
         saveSnapshot, restoreSnapshot, updateMessageVersion, settings, updateSettings,
@@ -655,7 +655,18 @@ export const Editor: React.FC = () => {
                             <div className="flex flex-col border-r border-zinc-800 shrink-0" style={{ width: viewMode === 'split' ? `${editorRatio * 100}%` : '100%', maxWidth: viewMode === 'split' ? '90%' : '100%', minWidth: viewMode === 'split' ? '10%' : '100%' }}>
                                 <div className="flex-1 flex min-h-0">
                                     <div className="bg-[#09090b] border-r border-zinc-800 flex flex-col shrink-0" style={{ width: explorerWidth }}>
-                                        <div className="h-9 px-4 flex items-center justify-between text-xs font-medium text-zinc-500 border-b border-zinc-800/50 bg-zinc-900/20 shrink-0"><span>EXPLORER</span><div className="flex items-center gap-1"><button onClick={handleCreateFile} title="New File" className="hover:text-zinc-300 p-1"><FilePlus className="w-3.5 h-3.5" /></button><button onClick={handleCreateFolder} title="New Folder" className="hover:text-zinc-300 p-1"><FolderPlus className="w-3.5 h-3.5" /></button><button onClick={() => uploadInputRef.current?.click()} title="Upload Files" className="hover:text-zinc-300 p-1"><Upload className="w-3.5 h-3.5" /></button><input ref={uploadInputRef} type="file" multiple className="hidden" onChange={handleFileUpload} /><Search className="w-3.5 h-3.5 cursor-pointer hover:text-zinc-300 ml-1" onClick={() => setOpenCmd(true)} /></div></div>
+                                        <div className="h-9 px-4 flex items-center justify-between text-xs font-medium text-zinc-500 border-b border-zinc-800/50 bg-zinc-900/20 shrink-0">
+                                            <span>EXPLORER</span>
+                                            <div className="flex items-center gap-1">
+                                                <button onClick={() => toggleAllFolders(false)} title="Collapse All" className="hover:text-zinc-300 p-1"><ChevronsUp className="w-3.5 h-3.5" /></button>
+                                                <button onClick={() => toggleAllFolders(true)} title="Expand All" className="hover:text-zinc-300 p-1"><ChevronsDown className="w-3.5 h-3.5" /></button>
+                                                <button onClick={handleCreateFile} title="New File" className="hover:text-zinc-300 p-1"><FilePlus className="w-3.5 h-3.5" /></button>
+                                                <button onClick={handleCreateFolder} title="New Folder" className="hover:text-zinc-300 p-1"><FolderPlus className="w-3.5 h-3.5" /></button>
+                                                <button onClick={() => uploadInputRef.current?.click()} title="Upload Files" className="hover:text-zinc-300 p-1"><Upload className="w-3.5 h-3.5" /></button>
+                                                <input ref={uploadInputRef} type="file" multiple className="hidden" onChange={handleFileUpload} />
+                                                <Search className="w-3.5 h-3.5 cursor-pointer hover:text-zinc-300 ml-1" onClick={() => setOpenCmd(true)} />
+                                            </div>
+                                        </div>
                                         <div className="flex-1 overflow-y-auto py-2"><EnhancedRecursiveFileTree files={activeProjectFiles} depth={0} parentPath={null} /></div>
                                     </div>
                                     <div className="w-1 cursor-col-resize hover:bg-blue-600 transition-colors z-10 bg-transparent" onMouseDown={(e) => { e.preventDefault(); setIsDraggingExplorer(true); }} />
