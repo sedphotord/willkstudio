@@ -5,7 +5,7 @@ import {
   Layout, Maximize2, Minimize2, PanelLeft, RefreshCw, ExternalLink, Menu,
   CheckCircle2, AlertCircle, FilePlus, MousePointer2, Lightbulb, ArrowUp, Plus,
   ChevronLeft, RotateCw, Lock, FolderPlus, Upload, Trash2, Edit2, MoreVertical, Copy,
-  ArrowLeft
+  ArrowLeft, Zap
 } from 'lucide-react';
 import MonacoEditor from '@monaco-editor/react';
 import { SandpackProvider, SandpackLayout, SandpackPreview, useSandpack } from "@codesandbox/sandpack-react";
@@ -452,7 +452,7 @@ export const Editor: React.FC = () => {
                         title="Back to Dashboard"
                     >
                         <ArrowLeft className="w-4 h-4" />
-                        <div className="w-5 h-5 bg-white text-black rounded flex items-center justify-center font-bold text-xs">W</div>
+                        <Zap className="w-5 h-5 text-blue-500 fill-blue-500" />
                     </button>
                     <div className="flex items-center gap-2 text-sm">
                         <span className="text-zinc-500">willkstudio /</span>

@@ -62,7 +62,8 @@ const LandingPage: React.FC = () => {
       {/* Header */}
       <header className="relative z-10 px-6 h-16 flex items-center justify-between border-b border-white/5 backdrop-blur-md sticky top-0 bg-zinc-950/80">
         <div className="flex items-center gap-2">
-           <span className="font-bold text-xl tracking-tight flex items-center gap-1">
+           <span className="font-bold text-xl tracking-tight flex items-center gap-2">
+             <Zap className="w-6 h-6 text-blue-500 fill-blue-500" />
              <span className="text-white">WillkStudio</span>
            </span>
         </div>
@@ -354,8 +355,8 @@ const Studio: React.FC = () => {
       <aside className="w-64 bg-[#09090b] border-r border-zinc-800 flex flex-col shrink-0">
         <div className="h-16 flex items-center px-6 border-b border-zinc-800">
            <span className="font-bold text-lg tracking-tight flex items-center gap-2">
-             <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
-                 <span className="text-white text-xs font-bold">W</span>
+             <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center border border-blue-500/20">
+                 <Zap className="w-5 h-5 text-blue-500 fill-blue-500" />
              </div>
              <span className="text-white">WillkStudio</span>
            </span>
