@@ -737,6 +737,14 @@ export const Editor: React.FC = () => {
                                     template="vite-react"
                                     theme="dark"
                                     files={flattenFiles(activeProjectFiles)}
+                                    options={{
+                                        externalResources: ["https://cdn.tailwindcss.com"],
+                                        classes: {
+                                            "sp-wrapper": "h-full",
+                                            "sp-layout": "h-full",
+                                            "sp-preview": "h-full"
+                                        }
+                                    }}
                                 >
                                     <SandpackLayout className="!h-full !block !rounded-none !border-0 bg-zinc-950">
                                         <BrowserFrame />
